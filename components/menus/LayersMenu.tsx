@@ -36,10 +36,13 @@ export const LayersMenu: React.FC<LayersMenuProps> = ({
     return () => window.removeEventListener('click', handleClickOutside);
   }, []);
 
+  // Sync multi-select mode with selection count
   useEffect(() => {
-      if (selectedElementIds.length > 1 && !isMultiSelectMode) {
-          setIsMultiSelectMode(true);
-      }
+    if (selectedElementIds.length >= 2) {
+      setIsMultiSelectMode(true);
+    } else if (selectedElementIds.length <= 1) {
+      setIsMultiSelectMode(false);
+    }
   }, [selectedElementIds.length]);
 
   const isFolderType = (el: CanvasElement) => {
@@ -57,6 +60,7 @@ export const LayersMenu: React.FC<LayersMenuProps> = ({
       
       if (isGroup) {
           setSelectedElementIds([layer.id]);
+          setIsMultiSelectMode(false);
       } else {
           const isModifier = e.ctrlKey || e.metaKey || e.shiftKey;
           let newSelection = [...selectedElementIds];
@@ -74,6 +78,7 @@ export const LayersMenu: React.FC<LayersMenuProps> = ({
           } else {
               newSelection = [layer.id];
           }
+
           setSelectedElementIds(newSelection);
       }
   };
@@ -119,6 +124,7 @@ export const LayersMenu: React.FC<LayersMenuProps> = ({
       const updatedScreens = project.screens.map(s => s.id === project.activeScreenId ? { ...s, elements: [...s.elements, newGroup] } : s);
       setProject({ ...project, screens: updatedScreens });
       setSelectedElementIds([newGroupId]);
+      setIsMultiSelectMode(false);
       if(setSelectedScreenIds) setSelectedScreenIds([]);
       if(setSelectedScreenGroupIds) setSelectedScreenGroupIds([]);
   };
@@ -182,7 +188,9 @@ export const LayersMenu: React.FC<LayersMenuProps> = ({
     e.stopPropagation(); e.preventDefault();
     
     // Select this item and ensure screen selections are cleared
-    if (!selectedElementIds.includes(id)) setSelectedElementIds([id]);
+    if (!selectedElementIds.includes(id)) {
+        setSelectedElementIds([id]);
+    }
     if (setSelectedScreenIds) setSelectedScreenIds([]);
     if (setSelectedScreenGroupIds) setSelectedScreenGroupIds([]);
 
@@ -243,6 +251,8 @@ export const LayersMenu: React.FC<LayersMenuProps> = ({
       const updatedElements = activeScreen.elements.map(el => selectedElementIds.includes(el.id) ? { ...el, parentId: newGroup.id } : el);
       const updatedScreens = project.screens.map(s => s.id === project.activeScreenId ? { ...s, elements: [...updatedElements, newGroup] } : s);
       setProject({ ...project, screens: updatedScreens });
+      setSelectedElementIds([newGroup.id]);
+      setIsMultiSelectMode(false);
       setActiveMenu(null);
   };
 

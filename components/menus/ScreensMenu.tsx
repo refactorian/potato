@@ -35,10 +35,13 @@ export const ScreensMenu: React.FC<ScreensMenuProps> = ({
     return () => window.removeEventListener('click', handleClickOutside);
   }, []);
 
+  // Sync multi-select mode with selection count
   useEffect(() => {
-      if (selectedScreenIds.length > 1 && !isMultiSelectMode) {
-          setIsMultiSelectMode(true);
-      }
+    if (selectedScreenIds.length >= 2) {
+      setIsMultiSelectMode(true);
+    } else if (selectedScreenIds.length <= 1) {
+      setIsMultiSelectMode(false);
+    }
   }, [selectedScreenIds.length]);
 
   const handleSelection = (e: React.MouseEvent, id: string, type: ItemType) => {
@@ -58,6 +61,7 @@ export const ScreensMenu: React.FC<ScreensMenuProps> = ({
               newSelection = [id];
               setSelectedGroupIds([]);
           }
+          
           setSelectedScreenIds(newSelection);
           
           if (newSelection.length === 1 && !isModifier) {

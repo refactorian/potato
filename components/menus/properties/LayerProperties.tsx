@@ -1,11 +1,13 @@
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Project, Interaction, IconStyle, CanvasElement, InteractionAction, ComponentStyle } from '../../../types';
 import { 
     Trash2, Link as LinkIcon, Eye, EyeOff, Lock, Unlock, ExternalLink, 
     MessageCircle, ArrowLeft, Type, Maximize, Palette, Layers, 
     Image as ImageIcon, Square, ChevronDown, ChevronRight, Sparkles, 
-    Baseline, AlignLeft, AlignCenter, AlignRight, Italic, Bold, CaseUpper, Smartphone, Globe
+    Baseline, AlignLeft, AlignCenter, AlignRight, Italic, Bold, CaseUpper, 
+    Smartphone, Globe, LayoutList, TextCursor, Underline, Strikethrough,
+    Layers as LayersIcon, PanelTop, PanelBottom, PanelLeft, PanelRight, FileCode
 } from 'lucide-react';
 import { IconPickerControl } from '../../common/IconPickerControl';
 
@@ -25,21 +27,46 @@ const FONTS = [
     'Courier New, monospace'
 ];
 
+const ALL_SECTIONS = ['layout', 'appearance', 'typography', 'image', 'border', 'effects', 'navbar', 'button'];
+
 export const LayerProperties: React.FC<LayerPropertiesProps> = ({
   project,
   setProject,
   selectedElementId
 }) => {
   const [activeTab, setActiveTab] = useState<'style' | 'interactions'>('style');
-  const [expandedSections, setExpandedSections] = useState<string[]>(['layout', 'appearance', 'typography', 'image', 'border', 'effects']);
+  const [expandedSections, setExpandedSections] = useState<string[]>(['layout', 'appearance', 'typography']);
 
   const activeScreen = (project.screens || []).find(s => s.id === project.activeScreenId);
   const element = activeScreen?.elements?.find(el => el.id === selectedElementId);
+
+  // Auto-expand relevant sections when switching elements and reset state
+  useEffect(() => {
+    if (element) {
+        // Ensure standard sections are visible and add context-specific ones
+        setExpandedSections(prev => {
+            const next = new Set(['layout', 'appearance', ...prev]);
+            if (element.type === 'image') next.add('image');
+            if (element.type === 'text') next.add('typography');
+            if (element.type === 'navbar') next.add('navbar');
+            if (element.type === 'button') next.add('button');
+            return Array.from(next);
+        });
+    }
+  }, [selectedElementId, element?.type]);
 
   if (!element) return null;
 
   const toggleSection = (id: string) => {
       setExpandedSections(prev => prev.includes(id) ? prev.filter(s => s !== id) : [...prev, id]);
+  };
+
+  const toggleAllSections = () => {
+      if (expandedSections.length > 0) {
+          setExpandedSections([]);
+      } else {
+          setExpandedSections(ALL_SECTIONS);
+      }
   };
 
   const updateElement = (changes: Partial<CanvasElement> | { style: Partial<ComponentStyle> } | { props: any }) => {
@@ -132,7 +159,7 @@ export const LayerProperties: React.FC<LayerPropertiesProps> = ({
   };
 
   return (
-    <div className="flex flex-col h-full bg-white dark:bg-gray-800 animate-in fade-in duration-200">
+    <div className="flex flex-col h-full bg-white dark:bg-gray-800 animate-in fade-in duration-200" key={selectedElementId}>
       <div className="flex border-b border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-850 shrink-0">
         <button onClick={() => setActiveTab('style')} className={`flex-1 py-3 text-xs font-bold uppercase tracking-wide transition-colors ${activeTab === 'style' ? 'text-indigo-600 dark:text-indigo-400 border-b-2 border-indigo-600 dark:border-indigo-400' : 'text-gray-500 dark:text-gray-400 hover:text-gray-700'}`}>Design</button>
         <button onClick={() => setActiveTab('interactions')} className={`flex-1 py-3 text-xs font-bold uppercase tracking-wide transition-colors ${activeTab === 'interactions' ? 'text-indigo-600 dark:text-indigo-400 border-b-2 border-indigo-600 dark:border-indigo-400' : 'text-gray-500 dark:text-gray-400 hover:text-gray-700'}`}>Events</button>
@@ -167,7 +194,7 @@ export const LayerProperties: React.FC<LayerPropertiesProps> = ({
                     <div className="space-y-1">
                         <label className="text-[10px] text-gray-400 font-bold uppercase">Background</label>
                         <div className="flex gap-2">
-                            <input type="color" className="w-8 h-8 rounded border cursor-pointer p-0" value={element.style.backgroundColor || '#ffffff'} onChange={e => updateElement({ style: { backgroundColor: e.target.value } })} />
+                            <input type="color" className="w-8 h-8 rounded border-none cursor-pointer p-0 overflow-hidden" value={element.style.backgroundColor || '#ffffff'} onChange={e => updateElement({ style: { backgroundColor: e.target.value } })} />
                             <input type="text" className="flex-1 p-2 text-xs border rounded dark:bg-gray-700 dark:border-gray-600 uppercase font-mono" value={element.style.backgroundColor} onChange={e => updateElement({ style: { backgroundColor: e.target.value } })} />
                         </div>
                     </div>
@@ -213,8 +240,18 @@ export const LayerProperties: React.FC<LayerPropertiesProps> = ({
                             </select>
                         </div>
                     </div>
-                    <div className="flex gap-2">
-                        <div className="flex bg-gray-100 dark:bg-gray-700 p-0.5 rounded-lg border border-gray-200 dark:border-gray-700 flex-1">
+                    <div className="grid grid-cols-2 gap-3">
+                         <div className="space-y-1">
+                            <label className="text-[10px] text-gray-400 font-bold uppercase">Line Height</label>
+                            <input type="number" step="0.1" className="w-full p-2 text-xs border rounded bg-gray-50 dark:bg-gray-700 dark:border-gray-600" value={element.style.lineHeight || 1.2} onChange={e => updateElement({ style: { lineHeight: Number(e.target.value) } })} />
+                        </div>
+                        <div className="space-y-1">
+                            <label className="text-[10px] text-gray-400 font-bold uppercase">Spacing</label>
+                            <input type="number" step="0.5" className="w-full p-2 text-xs border rounded bg-gray-50 dark:bg-gray-700 dark:border-gray-600" value={element.style.letterSpacing || 0} onChange={e => updateElement({ style: { letterSpacing: Number(e.target.value) } })} />
+                        </div>
+                    </div>
+                    <div className="flex gap-1.5 overflow-x-auto pb-1 no-scrollbar">
+                        <div className="flex bg-gray-100 dark:bg-gray-700 p-0.5 rounded-lg border border-gray-200 dark:border-gray-700 flex-1 min-w-[120px]">
                             {(['left', 'center', 'right'] as const).map(align => (
                                 <button key={align} onClick={() => updateElement({ style: { textAlign: align } })} className={`flex-1 flex justify-center py-1 rounded-md transition-all ${element.style.textAlign === align ? 'bg-white dark:bg-gray-600 shadow text-indigo-600 dark:text-indigo-400' : 'text-gray-400'}`}>
                                     {align === 'left' && <AlignLeft size={14}/>}
@@ -223,11 +260,11 @@ export const LayerProperties: React.FC<LayerPropertiesProps> = ({
                                 </button>
                             ))}
                         </div>
-                        <button onClick={() => updateElement({ style: { fontStyle: element.style.fontStyle === 'italic' ? 'normal' : 'italic' } })} className={`p-2 px-3 rounded-lg border transition-all ${element.style.fontStyle === 'italic' ? 'bg-indigo-50 border-indigo-200 text-indigo-600' : 'bg-gray-50 border-gray-200 text-gray-400'}`}>
+                        <button onClick={() => updateElement({ style: { fontStyle: element.style.fontStyle === 'italic' ? 'normal' : 'italic' } })} className={`p-2 px-3 rounded-lg border transition-all ${element.style.fontStyle === 'italic' ? 'bg-indigo-50 border-indigo-200 text-indigo-600 dark:bg-indigo-900/40 dark:border-indigo-800' : 'bg-gray-50 border-gray-200 text-gray-400 dark:bg-gray-700 dark:border-gray-600'}`}>
                             <Italic size={14} />
                         </button>
-                        <button onClick={() => updateElement({ style: { textTransform: element.style.textTransform === 'uppercase' ? 'none' : 'uppercase' } })} className={`p-2 px-3 rounded-lg border transition-all ${element.style.textTransform === 'uppercase' ? 'bg-indigo-50 border-indigo-200 text-indigo-600' : 'bg-gray-50 border-gray-200 text-gray-400'}`}>
-                            <CaseUpper size={14} />
+                        <button onClick={() => updateElement({ style: { textDecoration: element.style.textDecoration === 'underline' ? 'none' : 'underline' } })} className={`p-2 px-3 rounded-lg border transition-all ${element.style.textDecoration === 'underline' ? 'bg-indigo-50 border-indigo-200 text-indigo-600 dark:bg-indigo-900/40 dark:border-indigo-800' : 'bg-gray-50 border-gray-200 text-gray-400 dark:bg-gray-700 dark:border-gray-600'}`}>
+                            <Underline size={14} />
                         </button>
                     </div>
                 </div>
@@ -238,7 +275,7 @@ export const LayerProperties: React.FC<LayerPropertiesProps> = ({
                      <div className="flex p-1 bg-gray-100 dark:bg-gray-700 rounded-lg">
                         <button 
                             onClick={() => updateElement({ props: { _srcMode: 'url' } })}
-                            className={`flex-1 flex items-center justify-center gap-2 py-1.5 text-[10px] font-bold uppercase rounded-md transition-all ${element.props._srcMode !== 'assets' ? 'bg-white dark:bg-gray-600 shadow text-indigo-600' : 'text-gray-400'}`}
+                            className={`flex-1 flex items-center justify-center gap-2 py-1.5 text-[10px] font-bold uppercase rounded-md transition-all ${element.props._srcMode !== 'assets' && element.props._srcMode !== 'raw' ? 'bg-white dark:bg-gray-600 shadow text-indigo-600' : 'text-gray-400'}`}
                         >
                             <Globe size={12} /> URL
                         </button>
@@ -248,10 +285,16 @@ export const LayerProperties: React.FC<LayerPropertiesProps> = ({
                         >
                             <Smartphone size={12} /> Assets
                         </button>
+                        <button 
+                            onClick={() => updateElement({ props: { _srcMode: 'raw' } })}
+                            className={`flex-1 flex items-center justify-center gap-2 py-1.5 text-[10px] font-bold uppercase rounded-md transition-all ${element.props._srcMode === 'raw' ? 'bg-white dark:bg-gray-600 shadow text-indigo-600' : 'text-gray-400'}`}
+                        >
+                            <FileCode size={12} /> Raw
+                        </button>
                     </div>
 
-                    {element.props._srcMode === 'assets' ? (
-                        <div className="grid grid-cols-4 gap-1 p-2 bg-gray-50 dark:bg-gray-900 rounded-lg border dark:border-gray-700">
+                    {element.props._srcMode === 'assets' && (
+                        <div className="grid grid-cols-4 gap-1.5 p-2 bg-gray-50 dark:bg-gray-900 rounded-lg border dark:border-gray-700 max-h-[160px] overflow-y-auto custom-scrollbar">
                             {project.assets.filter(a => a.type === 'image').map(asset => (
                                 <button key={asset.id} onClick={() => updateElement({ props: { src: asset.src } })} className={`aspect-square rounded overflow-hidden border-2 transition-all ${element.props.src === asset.src ? 'border-indigo-500 scale-95 shadow-md' : 'border-transparent opacity-60 hover:opacity-100'}`}>
                                     <img src={asset.src} className="w-full h-full object-cover" />
@@ -259,8 +302,26 @@ export const LayerProperties: React.FC<LayerPropertiesProps> = ({
                             ))}
                             {project.assets.length === 0 && <div className="col-span-4 py-4 text-[10px] text-gray-400 text-center italic">No images in library</div>}
                         </div>
-                    ) : (
-                        <input type="text" className="w-full p-2 text-xs border rounded bg-gray-50 dark:bg-gray-700 dark:border-gray-600 font-mono" placeholder="https://..." value={element.props.src || ''} onChange={e => updateElement({ props: { src: e.target.value } })} />
+                    )}
+                    
+                    {element.props._srcMode === 'raw' && (
+                        <div className="space-y-1">
+                            <label className="text-[10px] text-gray-400 font-bold uppercase tracking-wider">Base64 Data</label>
+                            <textarea 
+                                className="w-full p-2 text-[10px] border rounded bg-gray-50 dark:bg-gray-700 dark:border-gray-600 font-mono" 
+                                rows={4}
+                                placeholder="data:image/png;base64,..." 
+                                value={element.props.src || ''} 
+                                onChange={e => updateElement({ props: { src: e.target.value } })} 
+                            />
+                        </div>
+                    )}
+
+                    {(element.props._srcMode !== 'assets' && element.props._srcMode !== 'raw') && (
+                        <div className="space-y-1">
+                            <label className="text-[10px] text-gray-400 font-bold uppercase tracking-wider">Image URL</label>
+                            <input type="text" className="w-full p-2 text-xs border rounded bg-gray-50 dark:bg-gray-700 dark:border-gray-600 font-mono" placeholder="https://..." value={element.props.src || ''} onChange={e => updateElement({ props: { src: e.target.value } })} />
+                        </div>
                     )}
                 </div>
             </PropertySection>
@@ -281,14 +342,19 @@ export const LayerProperties: React.FC<LayerPropertiesProps> = ({
                             </select>
                         </div>
                     </div>
+
                     <div className="space-y-1">
-                        <label className="text-[10px] text-gray-400 font-bold uppercase">Radius</label>
-                        <input type="range" min="0" max="100" className="w-full accent-indigo-600 h-1 bg-gray-200 rounded-full" value={element.style.borderRadius || 0} onChange={e => updateElement({ style: { borderRadius: Number(e.target.value) } })} />
+                        <div className="flex justify-between items-center mb-1">
+                            <label className="text-[10px] text-gray-400 font-bold uppercase">Corner Radius</label>
+                            <span className="text-[10px] text-gray-500">{element.style.borderRadius || 0}px</span>
+                        </div>
+                        <input type="range" min="0" max="100" className="w-full accent-indigo-600 h-1 bg-gray-200 dark:bg-gray-700 rounded-full appearance-none cursor-pointer" value={element.style.borderRadius || 0} onChange={e => updateElement({ style: { borderRadius: Number(e.target.value) } })} />
                     </div>
+
                     <div className="space-y-1">
                         <label className="text-[10px] text-gray-400 font-bold uppercase">Border Color</label>
                         <div className="flex gap-2">
-                             <input type="color" className="w-8 h-8 rounded border-none cursor-pointer" value={element.style.borderColor || '#000000'} onChange={e => updateElement({ style: { borderColor: e.target.value } })} />
+                             <input type="color" className="w-8 h-8 rounded border-none cursor-pointer overflow-hidden p-0" value={element.style.borderColor || '#000000'} onChange={e => updateElement({ style: { borderColor: e.target.value } })} />
                              <input type="text" className="flex-1 p-2 text-xs border rounded dark:bg-gray-700 dark:border-gray-600 uppercase font-mono" value={element.style.borderColor} onChange={e => updateElement({ style: { borderColor: e.target.value } })} />
                         </div>
                     </div>
@@ -297,32 +363,35 @@ export const LayerProperties: React.FC<LayerPropertiesProps> = ({
 
             <PropertySection id="effects" label="Effects" icon={Sparkles}>
                 <div className="space-y-4">
-                    <label className="flex items-center justify-between cursor-pointer p-2 bg-gray-50 dark:bg-gray-750 rounded-lg">
-                        <span className="text-[10px] font-bold text-gray-500 uppercase">Enable Shadow</span>
-                        <input type="checkbox" className="w-4 h-4 text-indigo-600 rounded" checked={!!element.style.shadow} onChange={e => updateElement({ style: { shadow: e.target.checked } })} />
+                    <label className="flex items-center justify-between cursor-pointer p-2 bg-gray-50 dark:bg-gray-750 rounded-lg group">
+                        <span className="text-[10px] font-bold text-gray-500 uppercase tracking-wider flex items-center gap-2">
+                            <LayersIcon size={12} className="text-gray-400 group-hover:text-indigo-500" />
+                            Enable Shadow
+                        </span>
+                        <input type="checkbox" className="w-4 h-4 text-indigo-600 rounded border-gray-300 focus:ring-indigo-500" checked={!!element.style.shadow} onChange={e => updateElement({ style: { shadow: e.target.checked } })} />
                     </label>
 
                     {element.style.shadow && (
                         <div className="grid grid-cols-2 gap-x-4 gap-y-3 p-3 bg-white dark:bg-gray-900 border border-gray-100 dark:border-gray-700 rounded-lg animate-in fade-in duration-200">
                             <div className="space-y-1">
-                                <label className="text-[10px] text-gray-400">Offset X</label>
-                                <input type="number" className="w-full p-1.5 text-[10px] border rounded dark:bg-gray-700" value={element.style.shadowOffsetX ?? 0} onChange={e => updateElement({ style: { shadowOffsetX: Number(e.target.value) } })} />
+                                <label className="text-[10px] text-gray-400 font-bold uppercase">Offset X</label>
+                                <input type="number" className="w-full p-2 text-xs border rounded dark:bg-gray-700 dark:border-gray-600" value={element.style.shadowOffsetX ?? 0} onChange={e => updateElement({ style: { shadowOffsetX: Number(e.target.value) } })} />
                             </div>
                             <div className="space-y-1">
-                                <label className="text-[10px] text-gray-400">Offset Y</label>
-                                <input type="number" className="w-full p-1.5 text-[10px] border rounded dark:bg-gray-700" value={element.style.shadowOffsetY ?? 4} onChange={e => updateElement({ style: { shadowOffsetY: Number(e.target.value) } })} />
+                                <label className="text-[10px] text-gray-400 font-bold uppercase">Offset Y</label>
+                                <input type="number" className="w-full p-2 text-xs border rounded dark:bg-gray-700 dark:border-gray-600" value={element.style.shadowOffsetY ?? 4} onChange={e => updateElement({ style: { shadowOffsetY: Number(e.target.value) } })} />
                             </div>
                             <div className="space-y-1">
-                                <label className="text-[10px] text-gray-400">Blur</label>
-                                <input type="number" className="w-full p-1.5 text-[10px] border rounded dark:bg-gray-700" value={element.style.shadowBlur ?? 6} onChange={e => updateElement({ style: { shadowBlur: Number(e.target.value) } })} />
+                                <label className="text-[10px] text-gray-400 font-bold uppercase">Blur</label>
+                                <input type="number" className="w-full p-2 text-xs border rounded dark:bg-gray-700 dark:border-gray-600" value={element.style.shadowBlur ?? 6} onChange={e => updateElement({ style: { shadowBlur: Number(e.target.value) } })} />
                             </div>
                             <div className="space-y-1">
-                                <label className="text-[10px] text-gray-400">Spread</label>
-                                <input type="number" className="w-full p-1.5 text-[10px] border rounded dark:bg-gray-700" value={element.style.shadowSpread ?? -1} onChange={e => updateElement({ style: { shadowSpread: Number(e.target.value) } })} />
+                                <label className="text-[10px] text-gray-400 font-bold uppercase">Spread</label>
+                                <input type="number" className="w-full p-2 text-xs border rounded dark:bg-gray-700 dark:border-gray-600" value={element.style.shadowSpread ?? -1} onChange={e => updateElement({ style: { shadowSpread: Number(e.target.value) } })} />
                             </div>
                              <div className="space-y-1 col-span-2 pt-2">
-                                <label className="text-[10px] text-gray-400">Shadow Color</label>
-                                <input type="color" className="w-full h-8 rounded-md border-none cursor-pointer" value={element.style.shadowColor || '#000000'} onChange={e => updateElement({ style: { shadowColor: e.target.value } })} />
+                                <label className="text-[10px] text-gray-400 font-bold uppercase">Shadow Color</label>
+                                <input type="color" className="w-full h-8 rounded-md border-none cursor-pointer overflow-hidden p-0" value={element.style.shadowColor || '#000000'} onChange={e => updateElement({ style: { shadowColor: e.target.value } })} />
                             </div>
                         </div>
                     )}
@@ -451,15 +520,31 @@ export const LayerProperties: React.FC<LayerPropertiesProps> = ({
         )}
       </div>
 
-      <div className="p-4 border-t border-gray-200 dark:border-gray-700 flex justify-between items-center bg-gray-50 dark:bg-gray-850">
-           <div className="flex items-center gap-2">
-                <Layers size={14} className="text-gray-400" />
-                <span className="text-[10px] font-black text-gray-400 uppercase">{element.id.slice(0, 8)}</span>
+      {/* Panel Footer Toolbar */}
+      <div className="p-4 border-t border-gray-200 dark:border-gray-700 flex justify-between items-center bg-gray-50 dark:bg-gray-850 shrink-0">
+           <div className="flex items-center gap-4">
+                <div className="flex items-center gap-2">
+                    <LayersIcon size={14} className="text-gray-400" />
+                    <span className="text-[10px] font-black text-gray-400 uppercase">{element.id.slice(0, 8)}</span>
+                </div>
            </div>
-           {/* Fix: Use 'Unlock' which is now imported from lucide-react */}
-           <button onClick={() => updateElement({ locked: !element.locked })} className={`p-1.5 rounded-lg transition-colors ${element.locked ? 'bg-red-50 text-red-500' : 'text-gray-400 hover:text-indigo-600'}`}>
-                {element.locked ? <Lock size={14} /> : <Unlock size={14} />}
-           </button>
+           
+           <div className="flex items-center gap-2">
+                {/* Master Toggle Button placed beside Lock/Eye */}
+                <button 
+                    onClick={toggleAllSections}
+                    className={`p-1.5 rounded-lg transition-all ${expandedSections.length > 0 ? 'bg-indigo-100 text-indigo-600 dark:bg-indigo-900/50 dark:text-indigo-400' : 'text-gray-400 hover:text-indigo-600'}`}
+                    title={expandedSections.length > 0 ? "Collapse All Sections" : "Expand All Sections"}
+                >
+                    <LayoutList size={16} />
+                </button>
+                <button onClick={() => updateElement({ locked: !element.locked })} className={`p-1.5 rounded-lg transition-colors ${element.locked ? 'bg-red-50 text-red-500 dark:bg-red-900/30' : 'text-gray-400 hover:text-indigo-600'}`}>
+                    {element.locked ? <Lock size={16} /> : <Unlock size={16} />}
+                </button>
+                <button onClick={() => updateElement({ hidden: !element.hidden })} className={`p-1.5 rounded-lg transition-colors ${element.hidden ? 'bg-gray-100 text-gray-400 dark:bg-gray-700' : 'text-gray-400 hover:text-indigo-600'}`}>
+                    {element.hidden ? <EyeOff size={16} /> : <Eye size={16} />}
+                </button>
+           </div>
       </div>
     </div>
   );
