@@ -144,19 +144,27 @@ const App: React.FC = () => {
       setExportConfig({ ...config, isOpen: true });
   };
 
-  const handleProjectCreate = (newProject: Project) => {
-      // Immediate save to ensure persistence
-      localStorage.setItem(`potato_project_${newProject.id}`, JSON.stringify(newProject));
+  const handleProjectCreate = (newProjectOrProjects: Project | Project[]) => {
+      const projects = Array.isArray(newProjectOrProjects) ? newProjectOrProjects : [newProjectOrProjects];
       
-      // Update index immediately
       const indexStr = localStorage.getItem('potato_projects_index');
       let list = indexStr ? JSON.parse(indexStr) : [];
-      const newMeta = { id: newProject.id, name: newProject.name, lastModified: Date.now() };
-      list = list.filter((p: any) => p.id !== newProject.id);
-      list.unshift(newMeta);
+
+      projects.forEach(newProject => {
+          // Immediate save to ensure persistence
+          localStorage.setItem(`potato_project_${newProject.id}`, JSON.stringify(newProject));
+          
+          const newMeta = { id: newProject.id, name: newProject.name, lastModified: Date.now() };
+          list = list.filter((p: any) => p.id !== newProject.id);
+          list.unshift(newMeta);
+      });
+
       localStorage.setItem('potato_projects_index', JSON.stringify(list));
 
-      setProject(newProject);
+      // Set the first project in the list as active if any were created
+      if (projects.length > 0) {
+          setProject(projects[0]);
+      }
   };
 
   /* --- Tool Handling --- */
