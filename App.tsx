@@ -11,7 +11,9 @@ import { TemplatePreviewArea } from './components/TemplatePreviewArea';
 import { ImagePreviewArea } from './components/ImagePreviewArea';
 import { ExportModal } from './components/modals/ExportModal';
 import { CreateProjectModal } from './components/modals/CreateProjectModal';
+import { AppSettingsPage } from './components/AppSettingsPage';
 import { v4 as uuidv4 } from 'uuid';
+import { MousePointerClick } from 'lucide-react';
 
 const INITIAL_PROJECT: Project = {
   id: uuidv4(),
@@ -45,8 +47,7 @@ const DEFAULT_SETTINGS: AppSettings = {
     showTooltips: true,
     defaultGridVisible: true,
     defaultSnapToGrid: true,
-    deleteScreensWithGroup: true,
-    deleteLayersWithGroup: true
+    showHotspots: true
 };
 
 const App: React.FC = () => {
@@ -86,6 +87,7 @@ const App: React.FC = () => {
   const [previewTemplate, setPreviewTemplate] = useState<TemplateDefinition | null>(null);
   const [previewImage, setPreviewImage] = useState<ScreenImage | null>(null);
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
+  const [showHotspotsPersistent, setShowHotspotsPersistent] = useState(false);
   
   // Export Modal State
   const [exportConfig, setExportConfig] = useState<ExportConfig>({ isOpen: false, type: 'project' });
@@ -164,6 +166,14 @@ const App: React.FC = () => {
       // Set the first project in the list as active if any were created
       if (projects.length > 0) {
           setProject(projects[0]);
+      }
+  };
+
+  const handleTogglePreview = (value: boolean) => {
+      setIsPreview(value);
+      if (!value) {
+          setActiveLeftTab('screens');
+          setShowHotspotsPersistent(false);
       }
   };
 
@@ -337,6 +347,16 @@ const App: React.FC = () => {
 
   // Determine Main Content View
   const renderMainContent = () => {
+      // FIX: Only show Settings page if Preview Mode is NOT active
+      if (activeLeftTab === 'settings' && !isPreview) {
+          return (
+              <AppSettingsPage 
+                  settings={appSettings} 
+                  setSettings={setAppSettings} 
+              />
+          );
+      }
+
       if (previewTemplate) {
           return (
              <TemplatePreviewArea 
@@ -393,6 +413,7 @@ const App: React.FC = () => {
               isPreview={isPreview}
               appSettings={appSettings}
               setActiveLeftTab={setActiveLeftTab}
+              alwaysShowHotspots={showHotspotsPersistent}
             />
             
             {/* Floating Toolbar (Only visible in Edit Mode & Canvas View) */}
@@ -404,6 +425,24 @@ const App: React.FC = () => {
                     selectionCount={selectedElementIds.length}
                 />
             )}
+
+            {/* Preview Mode Hotspot Toggle */}
+            {isPreview && appSettings.showHotspots && (
+                <div className="fixed bottom-6 right-6 z-50">
+                    <button
+                        onClick={() => setShowHotspotsPersistent(!showHotspotsPersistent)}
+                        className={`p-4 rounded-full shadow-lg transition-all flex items-center gap-2 font-medium ${
+                            showHotspotsPersistent 
+                            ? 'bg-indigo-600 text-white hover:bg-indigo-700' 
+                            : 'bg-white dark:bg-gray-800 text-gray-600 dark:text-gray-300 border border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-700'
+                        }`}
+                        title="Toggle Always Show Hotspots"
+                    >
+                        <MousePointerClick size={20} />
+                        {showHotspotsPersistent && <span className="text-sm font-bold animate-in fade-in slide-in-from-right-2 duration-200">Hotspots On</span>}
+                    </button>
+                </div>
+            )}
          </div>
       );
   };
@@ -414,7 +453,7 @@ const App: React.FC = () => {
         scale={scale}
         setScale={setScale}
         isPreview={isPreview}
-        setIsPreview={setIsPreview}
+        setIsPreview={handleTogglePreview}
         project={project}
         setProject={setProject}
         theme={theme}
@@ -456,8 +495,8 @@ const App: React.FC = () => {
            {renderMainContent()}
         </div>
 
-        {/* Right Sidebar (Editor Mode Only) */}
-        {!isPreview && (
+        {/* Right Sidebar (Editor Mode Only) - Hide if Settings are active */}
+        {!isPreview && activeLeftTab !== 'settings' && (
           <SidebarRight
             project={project}
             setProject={setProject}

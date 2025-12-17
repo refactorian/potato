@@ -53,39 +53,32 @@ export interface CanvasElement {
   width: number;
   height: number;
   zIndex: number;
-  props: Record<string, any>; // Component specific props. Icons may have keys like 'leftIconStyle': IconStyle
+  parentId?: string; // For nested elements (groups)
+  props: Record<string, any>;
   style: ComponentStyle;
   interactions: Interaction[];
-  parentId?: string; // For grouping/containers
-  collapsed?: boolean; // UI state for layer tree
-  locked?: boolean; // New locking feature
-  hidden?: boolean; // New visibility feature
-}
-
-export interface ScreenGroup {
-  id: string;
-  name: string;
-  collapsed?: boolean;
+  collapsed?: boolean; // For groups in the layer tree
   locked?: boolean;
-  hidden?: boolean; // New visibility feature
-  parentId?: string; // New field for nested screen groups
+  hidden?: boolean;
 }
 
 export interface Screen {
   id: string;
   name: string;
-  groupId?: string; // Link to ScreenGroup
   backgroundColor: string;
   elements: CanvasElement[];
-  locked?: boolean; // New locking feature
-  hidden?: boolean; // New visibility feature
+  locked?: boolean;
+  hidden?: boolean;
+  groupId?: string; // ID of the ScreenGroup this screen belongs to
 }
 
-export interface Asset {
-  id: string;
-  name: string;
-  type: 'image' | 'video';
-  src: string; // Base64 or URL
+export interface ScreenGroup {
+    id: string;
+    name: string;
+    collapsed: boolean;
+    locked?: boolean;
+    hidden?: boolean;
+    parentId?: string; // Allow nested screen groups
 }
 
 export interface GridConfig {
@@ -95,41 +88,50 @@ export interface GridConfig {
   snapToGrid: boolean;
 }
 
+export interface Asset {
+    id: string;
+    name: string;
+    type: 'image' | 'video';
+    src: string;
+}
+
 export interface Project {
   id: string;
   name: string;
   description?: string;
-  projectType?: 'mobile' | 'tablet' | 'desktop'; // New field
-  tags?: string[]; // New field
-  icon?: string; // New field for Project Icon
+  projectType?: 'mobile' | 'tablet' | 'desktop';
+  tags?: string[];
+  icon?: string; // Lucide icon name
   lastModified: number;
-  screenGroups: ScreenGroup[]; // Added screen groups
-  screens: Screen[];
-  assets: Asset[];
-  activeScreenId: string;
   viewportWidth: number;
   viewportHeight: number;
+  activeScreenId: string;
   gridConfig: GridConfig;
+  screens: Screen[];
+  assets: Asset[];
+  screenGroups: ScreenGroup[];
+}
+
+export interface LibraryItemChild {
+    type: ComponentType;
+    name: string;
+    x: number;
+    y: number;
+    width: number;
+    height: number;
+    props: Record<string, any>;
+    style: ComponentStyle;
 }
 
 export interface LibraryItem {
   type: ComponentType;
   label: string;
-  icon: string; // Lucide icon name for the library UI
+  icon: string; // Lucide icon name
   defaultWidth: number;
   defaultHeight: number;
   defaultProps: Record<string, any>;
   defaultStyle: ComponentStyle;
-  children?: {
-      type: ComponentType;
-      name: string;
-      x: number;
-      y: number;
-      width: number;
-      height: number;
-      props: Record<string, any>;
-      style: ComponentStyle;
-  }[];
+  children?: LibraryItemChild[]; // For hybrid components that come with pre-defined children (e.g. Card with text/buttons)
 }
 
 export interface LibraryCategory {
@@ -137,43 +139,42 @@ export interface LibraryCategory {
   items: LibraryItem[];
 }
 
-export interface TemplateDefinition {
-  id: string;
-  name: string;
-  category: string; // Added category
-  thumbnail: string;
-  elements: Omit<CanvasElement, 'id'>[]; // Elements without ID (generated on use)
-  backgroundColor: string;
-}
-
-export interface ScreenImage {
-  id: string;
-  name: string;
-  category: string;
-  src: string;
-  screenType?: 'mobile' | 'tablet' | 'desktop';
-}
-
 export interface ProjectTemplate {
   id: string;
   name: string;
   description: string;
-  thumbnail?: string; // Lucide icon name or image url
-  projectData: Omit<Project, 'id' | 'lastModified' | 'name' | 'description'>;
+  thumbnail?: string; // Lucide icon name
+  projectData: Partial<Project> & { screens: Screen[] }; // Partial project data to merge
+}
+
+export interface TemplateDefinition {
+  id: string;
+  name: string;
+  category: string;
+  thumbnail: string; // Lucide icon name
+  backgroundColor: string;
+  elements: (Omit<CanvasElement, 'id'> & { id?: string })[];
 }
 
 export interface AppSettings {
-  autoNavigateToLayers: boolean;
-  showTooltips: boolean;
-  defaultGridVisible: boolean;
-  defaultSnapToGrid: boolean;
-  deleteScreensWithGroup: boolean;
-  deleteLayersWithGroup: boolean;
+    autoNavigateToLayers: boolean;
+    showTooltips: boolean;
+    defaultGridVisible: boolean;
+    defaultSnapToGrid: boolean;
+    showHotspots: boolean;
 }
 
 export interface ExportConfig {
     isOpen: boolean;
-    type: 'project' | 'screen' | 'layer' | 'all-screens' | 'screen-group';
-    targetId?: string;
-    targetIds?: string[]; // Added for multi-select export
+    type: 'project' | 'screen' | 'screen-group' | 'layer' | 'all-screens';
+    targetId?: string; // ID of screen or layer to export
+    targetIds?: string[]; // IDs for bulk export
+}
+
+export interface ScreenImage {
+    id: string;
+    name: string;
+    category: string;
+    screenType: 'mobile' | 'tablet' | 'desktop';
+    src: string;
 }

@@ -17,6 +17,7 @@ interface CanvasProps {
   isPreview: boolean;
   appSettings?: AppSettings;
   setActiveLeftTab?: (tab: LeftSidebarTab) => void;
+  alwaysShowHotspots?: boolean;
 }
 
 export const Canvas: React.FC<CanvasProps> = ({
@@ -29,10 +30,12 @@ export const Canvas: React.FC<CanvasProps> = ({
   scale,
   isPreview,
   appSettings,
-  setActiveLeftTab
+  setActiveLeftTab,
+  alwaysShowHotspots
 }) => {
   const activeScreen = (project.screens || []).find((s) => s.id === project.activeScreenId);
   const canvasRef = useRef<HTMLDivElement>(null);
+  const [flashHotspots, setFlashHotspots] = useState(false);
   
   const [dragInfo, setDragInfo] = useState<{
     startX: number;
@@ -303,6 +306,19 @@ export const Canvas: React.FC<CanvasProps> = ({
       return true;
   };
 
+  const handleCanvasBackgroundClick = () => {
+      if (isPreview) {
+          // If in preview and settings allow, flash hotspots
+          if (appSettings?.showHotspots && !alwaysShowHotspots) {
+              setFlashHotspots(true);
+              setTimeout(() => setFlashHotspots(false), 400);
+          }
+      } else {
+          // If in edit mode, clear selection
+          setSelectedElementIds([]);
+      }
+  };
+
   return (
     <div
       id="canvas-root"
@@ -316,13 +332,12 @@ export const Canvas: React.FC<CanvasProps> = ({
       ref={canvasRef}
       onDrop={handleDrop}
       onDragOver={handleDragOver}
-      onClick={() => {
-          if(!isPreview) {
-              setSelectedElementIds([]);
-              // We do not clear screens on background click to keep sidebar context if desired,
-              // but if the user wants to deselect everything, App.tsx handles the wrapper click.
-              // Here we just stop propagation if needed.
-          }
+      onClick={(e) => {
+          // Stop propagation here? No, let the App wrapper handle click away? 
+          // Actually, we handle "click on canvas background" here.
+          // App.tsx handles "click on gray area outside canvas".
+          // So we need to stop prop here if we handle logic.
+          handleCanvasBackgroundClick();
       }}
     >
       <div className="absolute inset-0 -z-10" style={{ backgroundColor: activeScreen.backgroundColor }} />
@@ -351,6 +366,10 @@ export const Canvas: React.FC<CanvasProps> = ({
 
         const isSelected = selectedElementIds.includes(element.id) && !isPreview;
         const isLocked = element.locked || activeScreen.locked;
+        const hasInteractions = element.interactions && element.interactions.length > 0;
+        
+        const isFlash = isPreview && flashHotspots && hasInteractions;
+        const isPersistent = isPreview && appSettings?.showHotspots && alwaysShowHotspots && hasInteractions;
 
         return (
           <div
@@ -368,9 +387,29 @@ export const Canvas: React.FC<CanvasProps> = ({
             onMouseEnter={(e) => { if(!isPreview && !isSelected) e.currentTarget.style.outline = '1px dashed #3b82f6'; }}
             onMouseLeave={(e) => { if(!isPreview && !isSelected) e.currentTarget.style.outline = 'transparent'; }}
             onMouseDown={(e) => handleMouseDown(e, element.id)}
-            onClick={(e) => e.stopPropagation()}
+            onClick={(e) => {
+                // If preview mode and element has NO interaction, let the click propagate to canvas to trigger highlights?
+                // If it HAS interaction, prevent propagation so we don't flash highlights on valid clicks.
+                if (isPreview) {
+                    if (hasInteractions) {
+                        e.stopPropagation();
+                    }
+                    // Else allow propagation to background handler
+                } else {
+                    e.stopPropagation();
+                }
+            }}
           >
             <ElementRenderer element={element} isPreview={isPreview} />
+
+            {/* Hotspot Overlay */}
+            {(isFlash || isPersistent) && (
+                <div className={`absolute inset-0 z-50 pointer-events-none rounded-sm transition-all duration-200 ${
+                    isFlash 
+                    ? 'bg-indigo-500/30 border-2 border-indigo-500 animate-pulse' 
+                    : 'bg-indigo-500/10 border-2 border-indigo-500'
+                }`} />
+            )}
 
             {isSelected && (
               <>

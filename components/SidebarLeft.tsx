@@ -6,7 +6,7 @@ import { CanvasSettingsMenu } from './menus/CanvasSettingsMenu';
 import { ScreensMenu } from './menus/ScreensMenu';
 import { LayersMenu } from './menus/LayersMenu';
 import { ProjectMenu } from './menus/ProjectMenu';
-import { GlobalSettingsMenu } from './menus/GlobalSettingsMenu';
+// GlobalSettingsMenu is no longer needed here as it is a full page now
 
 interface SidebarLeftProps {
   project: Project;
@@ -43,10 +43,16 @@ export const SidebarLeft: React.FC<SidebarLeftProps> = ({
   
   const toggleTab = (tab: LeftSidebarTab) => {
     if (activeTab === tab && !isCollapsed) {
-        setIsCollapsed(true);
+        // If clicking the same tab, collapse it (unless it's settings which is full page)
+        if (tab !== 'settings') {
+            setIsCollapsed(true);
+        }
     } else {
         setActiveTab(tab);
-        setIsCollapsed(false);
+        // Ensure sidebar opens for non-settings tabs
+        if (tab !== 'settings') {
+            setIsCollapsed(false);
+        }
     }
   };
 
@@ -98,19 +104,21 @@ export const SidebarLeft: React.FC<SidebarLeftProps> = ({
                 showTooltips={appSettings.showTooltips}
             />
             
-             <button
-                onClick={() => setIsCollapsed(!isCollapsed)}
-                className="p-2 text-gray-400 hover:text-indigo-600 dark:hover:text-indigo-400 transition-colors"
-                title={isCollapsed ? "Expand Panel" : "Collapse Panel"}
-             >
-                 {isCollapsed ? <ChevronRight size={20} /> : <ChevronLeft size={20} />}
-             </button>
+             {activeTab !== 'settings' && (
+                 <button
+                    onClick={() => setIsCollapsed(!isCollapsed)}
+                    className="p-2 text-gray-400 hover:text-indigo-600 dark:hover:text-indigo-400 transition-colors"
+                    title={isCollapsed ? "Expand Panel" : "Collapse Panel"}
+                 >
+                     {isCollapsed ? <ChevronRight size={20} /> : <ChevronLeft size={20} />}
+                 </button>
+             )}
         </div>
       </div>
 
-      {/* Panel Content */}
-      <div className={`${isCollapsed ? 'w-0' : 'w-64'} transition-all duration-300 overflow-hidden flex flex-col bg-white dark:bg-gray-800`}>
-          {!isCollapsed && (
+      {/* Panel Content (Hidden if collapsed OR if Settings tab is active) */}
+      <div className={`${(isCollapsed || activeTab === 'settings') ? 'w-0' : 'w-64'} transition-all duration-300 overflow-hidden flex flex-col bg-white dark:bg-gray-800`}>
+          {!isCollapsed && activeTab !== 'settings' && (
              <>
                 {activeTab === 'project' && (
                     <ProjectMenu 
@@ -149,13 +157,6 @@ export const SidebarLeft: React.FC<SidebarLeftProps> = ({
                         setSelectedScreenGroupIds={setSelectedScreenGroupIds}
                         appSettings={appSettings}
                         onExport={onExport}
-                    />
-                )}
-
-                {activeTab === 'settings' && (
-                    <GlobalSettingsMenu 
-                        settings={appSettings}
-                        setSettings={setAppSettings}
                     />
                 )}
              </>

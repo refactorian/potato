@@ -111,13 +111,23 @@ export const CreateProjectModal: React.FC<CreateProjectModalProps> = ({ isOpen, 
           onClose();
       } else if (activeTab === 'template' && selectedTemplate) {
           const newProject: Project = {
+              viewportWidth: 375, // Default if missing in template
+              viewportHeight: 812, // Default if missing in template
+              assets: [],
+              screenGroups: [],
+              gridConfig: { 
+                  visible: true, 
+                  size: 20, 
+                  color: '#cbd5e1', 
+                  snapToGrid: true 
+              },
               ...selectedTemplate.projectData,
               id: uuidv4(),
               name: projectName !== 'New Project' ? projectName : selectedTemplate.name,
               description: selectedTemplate.description,
               lastModified: Date.now(),
               activeScreenId: selectedTemplate.projectData.screens[0]?.id || 'screen-1'
-          };
+          } as Project;
           onCreate(newProject);
           onClose();
       } else if (activeTab === 'duplicate' && selectedProjectIdToDuplicate) {

@@ -93,7 +93,8 @@ export const AssetsMenu: React.FC<AssetsMenuProps> = ({ project, setProject, onP
           id: asset.id,
           name: asset.name,
           src: asset.src,
-          category: 'Assets'
+          category: 'Assets',
+          screenType: 'mobile' // Default to mobile if unknown
       });
   };
 

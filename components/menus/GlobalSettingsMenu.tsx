@@ -1,7 +1,7 @@
 
 import React from 'react';
 import { AppSettings } from '../../types';
-import { ToggleRight, ToggleLeft, Monitor, Grid, HelpCircle, Trash2 } from 'lucide-react';
+import { ToggleRight, ToggleLeft, Monitor, Grid, HelpCircle, MousePointerClick } from 'lucide-react';
 
 interface GlobalSettingsMenuProps {
   settings: AppSettings;
@@ -53,6 +53,28 @@ export const GlobalSettingsMenu: React.FC<GlobalSettingsMenuProps> = ({ settings
 
         <div className="h-px bg-gray-100 dark:bg-gray-700" />
 
+        {/* Presentation Section */}
+        <section className="space-y-3">
+            <h3 className="text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                Presentation
+            </h3>
+            
+            <div className="flex items-center justify-between p-2">
+                <div className="flex items-center gap-3">
+                    <MousePointerClick size={16} className="text-gray-400" />
+                    <span className="text-sm text-gray-700 dark:text-gray-300">Show Hotspots</span>
+                </div>
+                <button 
+                    onClick={() => toggleSetting('showHotspots')}
+                    className={`transition-colors ${settings.showHotspots ? 'text-indigo-600 dark:text-indigo-400' : 'text-gray-300 dark:text-gray-600'}`}
+                >
+                    {settings.showHotspots ? <ToggleRight size={28} /> : <ToggleLeft size={28} />}
+                </button>
+            </div>
+        </section>
+
+        <div className="h-px bg-gray-100 dark:bg-gray-700" />
+
         {/* Defaults Section */}
         <section className="space-y-3">
             <h3 className="text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider">
@@ -82,47 +104,6 @@ export const GlobalSettingsMenu: React.FC<GlobalSettingsMenuProps> = ({ settings
                     className={`transition-colors ${settings.defaultSnapToGrid ? 'text-indigo-600 dark:text-indigo-400' : 'text-gray-300 dark:text-gray-600'}`}
                 >
                     {settings.defaultSnapToGrid ? <ToggleRight size={28} /> : <ToggleLeft size={28} />}
-                </button>
-            </div>
-        </section>
-
-        <div className="h-px bg-gray-100 dark:bg-gray-700" />
-
-        {/* Deletion Behavior */}
-        <section className="space-y-3">
-            <h3 className="text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider">
-                Deletion Logic
-            </h3>
-
-            <div className="flex items-center justify-between p-2">
-                <div className="flex items-center gap-3">
-                    <Trash2 size={16} className="text-gray-400" />
-                    <div>
-                        <div className="text-sm text-gray-700 dark:text-gray-300">Delete Group Content</div>
-                        <div className="text-[10px] text-gray-500 dark:text-gray-400">Screens in Group</div>
-                    </div>
-                </div>
-                <button 
-                    onClick={() => toggleSetting('deleteScreensWithGroup')}
-                    className={`transition-colors ${settings.deleteScreensWithGroup ? 'text-indigo-600 dark:text-indigo-400' : 'text-gray-300 dark:text-gray-600'}`}
-                >
-                    {settings.deleteScreensWithGroup ? <ToggleRight size={28} /> : <ToggleLeft size={28} />}
-                </button>
-            </div>
-
-            <div className="flex items-center justify-between p-2">
-                <div className="flex items-center gap-3">
-                    <Trash2 size={16} className="text-gray-400" />
-                    <div>
-                        <div className="text-sm text-gray-700 dark:text-gray-300">Delete Layer Children</div>
-                        <div className="text-[10px] text-gray-500 dark:text-gray-400">Elements in Group</div>
-                    </div>
-                </div>
-                <button 
-                    onClick={() => toggleSetting('deleteLayersWithGroup')}
-                    className={`transition-colors ${settings.deleteLayersWithGroup ? 'text-indigo-600 dark:text-indigo-400' : 'text-gray-300 dark:text-gray-600'}`}
-                >
-                    {settings.deleteLayersWithGroup ? <ToggleRight size={28} /> : <ToggleLeft size={28} />}
                 </button>
             </div>
         </section>
