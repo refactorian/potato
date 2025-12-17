@@ -23,6 +23,7 @@ interface SidebarRightProps {
   appSettings?: AppSettings;
   onExport?: (config: Omit<ExportConfig, 'isOpen'>) => void;
   activeLeftTab?: LeftSidebarTab;
+  autoCollapse?: boolean;
 }
 
 type RightTab = 'properties' | 'assets' | 'components' | 'templates' | 'wireframes' | 'screen-images' | 'ui-elements';
@@ -37,7 +38,8 @@ export const SidebarRight: React.FC<SidebarRightProps> = ({
   onPreviewScreenImage,
   appSettings,
   onExport,
-  activeLeftTab
+  activeLeftTab,
+  autoCollapse
 }) => {
   const [activeTab, setActiveTab] = useState<RightTab>('components');
   const [isCollapsed, setIsCollapsed] = useState(false);
@@ -45,15 +47,25 @@ export const SidebarRight: React.FC<SidebarRightProps> = ({
   const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
   const [deleteType, setDeleteType] = useState<'layers' | 'screens' | 'project' | 'screenGroups'>('layers');
 
+  // Auto-collapse effect
+  useEffect(() => {
+      if (autoCollapse) {
+          setIsCollapsed(true);
+      }
+  }, [autoCollapse]);
+
   // Auto-switch to properties tab when elements/screens are selected
   useEffect(() => {
     if (isPinned) return;
 
     if (selectedElementIds.length > 0 || selectedScreenIds.length > 0 || selectedScreenGroupIds.length > 0 || activeLeftTab === 'project') {
       setActiveTab('properties');
-      setIsCollapsed(false); 
+      // Only auto-open if NOT in auto-collapse mode (e.g. task page active)
+      if (!autoCollapse) {
+          setIsCollapsed(false);
+      }
     }
-  }, [selectedElementIds, selectedScreenIds, selectedScreenGroupIds, activeLeftTab, isPinned]);
+  }, [selectedElementIds, selectedScreenIds, selectedScreenGroupIds, activeLeftTab, isPinned, autoCollapse]);
 
   const toggleTab = (tab: RightTab) => {
     if (activeTab === tab && !isCollapsed) {

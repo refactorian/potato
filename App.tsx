@@ -216,8 +216,8 @@ const App: React.FC = () => {
       />
 
       <div className="flex flex-1 overflow-hidden relative">
-        {/* Left Sidebar - Hidden if Task Page is Active */}
-        {!isPreview && !isTaskPageActive && (
+        {/* Left Sidebar */}
+        {!isPreview && (
           <SidebarLeft
             project={project}
             setProject={setProject}
@@ -232,6 +232,7 @@ const App: React.FC = () => {
             appSettings={appSettings}
             setAppSettings={setAppSettings}
             onExport={handleOpenExport}
+            autoCollapse={isTaskPageActive}
           />
         )}
 
@@ -243,8 +244,8 @@ const App: React.FC = () => {
            {renderMainContent()}
         </div>
 
-        {/* Right Sidebar - Hidden if Task Page is Active or Settings Active */}
-        {!isPreview && activeLeftTab !== 'settings' && !isTaskPageActive && (
+        {/* Right Sidebar - Hidden if Settings Active */}
+        {!isPreview && activeLeftTab !== 'settings' && (
           <SidebarRight
             project={project}
             setProject={setProject}
@@ -256,6 +257,7 @@ const App: React.FC = () => {
             appSettings={appSettings}
             onExport={handleOpenExport}
             activeLeftTab={activeLeftTab}
+            autoCollapse={isTaskPageActive}
           />
         )}
       </div>

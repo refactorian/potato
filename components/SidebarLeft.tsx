@@ -1,5 +1,5 @@
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Layout, Layers, ChevronLeft, ChevronRight, Ratio, Cog, FolderKanban } from 'lucide-react';
 import { Project, LeftSidebarTab, AppSettings, ExportConfig } from '../types';
 import { CanvasSettingsMenu } from './menus/CanvasSettingsMenu';
@@ -22,6 +22,7 @@ interface SidebarLeftProps {
   appSettings: AppSettings;
   setAppSettings: (s: AppSettings) => void;
   onExport: (config: Omit<ExportConfig, 'isOpen'>) => void;
+  autoCollapse?: boolean;
 }
 
 export const SidebarLeft: React.FC<SidebarLeftProps> = ({
@@ -37,10 +38,18 @@ export const SidebarLeft: React.FC<SidebarLeftProps> = ({
   setActiveTab,
   appSettings,
   setAppSettings,
-  onExport
+  onExport,
+  autoCollapse
 }) => {
   const [isCollapsed, setIsCollapsed] = useState(false);
   
+  // Auto-collapse effect when requested by parent (e.g. switching to Tasks view)
+  useEffect(() => {
+      if (autoCollapse) {
+          setIsCollapsed(true);
+      }
+  }, [autoCollapse]);
+
   const toggleTab = (tab: LeftSidebarTab) => {
     if (activeTab === tab && !isCollapsed) {
         // If clicking the same tab, collapse it (unless it's settings which is full page)
