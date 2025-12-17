@@ -41,6 +41,7 @@ const App: React.FC = () => {
   const [showHotspotsPersistent, setShowHotspotsPersistent] = useState(false);
   const [exportConfig, setExportConfig] = useState<ExportConfig>({ isOpen: false, type: 'project' });
   const [activeLeftTab, setActiveLeftTab] = useState<LeftSidebarTab>('project');
+  const [activeProjectSubTab, setActiveProjectSubTab] = useState<'screens' | 'task'>('screens');
   const [activeTool, setActiveTool] = useState<string>('select');
   const [theme, setTheme] = useState<'light' | 'dark'>('dark');
 
@@ -107,6 +108,8 @@ const App: React.FC = () => {
       }
   };
 
+  const isTaskPageActive = activeLeftTab === 'project' && activeProjectSubTab === 'task';
+
   // Render Main Content Logic
   const renderMainContent = () => {
       if (activeLeftTab === 'settings' && !isPreview) {
@@ -142,6 +145,8 @@ const App: React.FC = () => {
                 setProject={setProject}
                 setActiveTab={setActiveLeftTab}
                 onExport={handleOpenExport}
+                activeSubTab={activeProjectSubTab}
+                setActiveSubTab={setActiveProjectSubTab}
               />
            );
       }
@@ -211,8 +216,8 @@ const App: React.FC = () => {
       />
 
       <div className="flex flex-1 overflow-hidden relative">
-        {/* Left Sidebar */}
-        {!isPreview && (
+        {/* Left Sidebar - Hidden if Task Page is Active */}
+        {!isPreview && !isTaskPageActive && (
           <SidebarLeft
             project={project}
             setProject={setProject}
@@ -238,8 +243,8 @@ const App: React.FC = () => {
            {renderMainContent()}
         </div>
 
-        {/* Right Sidebar */}
-        {!isPreview && activeLeftTab !== 'settings' && (
+        {/* Right Sidebar - Hidden if Task Page is Active or Settings Active */}
+        {!isPreview && activeLeftTab !== 'settings' && !isTaskPageActive && (
           <SidebarRight
             project={project}
             setProject={setProject}

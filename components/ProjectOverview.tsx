@@ -1,5 +1,5 @@
 
-import React, { useState } from 'react';
+import React from 'react';
 import { Project, LeftSidebarTab, ExportConfig } from '../types';
 import { ScreensPage } from './ScreensPage';
 import { TaskPage } from './TaskPage';
@@ -10,10 +10,12 @@ interface ProjectOverviewProps {
   setProject: (p: Project) => void;
   setActiveTab: (tab: LeftSidebarTab) => void;
   onExport: (config: Omit<ExportConfig, 'isOpen'>) => void;
+  activeSubTab: 'screens' | 'task';
+  setActiveSubTab: (tab: 'screens' | 'task') => void;
 }
 
 export const ProjectOverview: React.FC<ProjectOverviewProps> = (props) => {
-  const [activeSubTab, setActiveSubTab] = useState<'screens' | 'task'>('screens');
+  const { activeSubTab, setActiveSubTab } = props;
 
   return (
     <div className="relative h-full flex flex-col overflow-hidden">
