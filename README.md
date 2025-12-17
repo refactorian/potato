@@ -3,7 +3,7 @@
 
 Potato is a modular and scalable web application designed for creating high-fidelity UI prototypes and wireframes directly in the browser. Inspired by industry-standard tools like Proto.io, it empowers designers and developers to build, organize, and export interface mockups using a flexible drag-and-drop canvas, a rich component library, and interactive features.
 
-![Potato UI Screenshot](https://via.placeholder.com/1200x600?text=Potato+UI+Preview)
+[Hosted On Vercel](https://potato-refactorian.vercel.app/)
 
 ## Features
 
