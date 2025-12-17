@@ -1,10 +1,11 @@
 
-import React, { useRef, useState, useEffect } from 'react';
-import { CanvasElement, Project, Interaction, LibraryItem, AppSettings, LeftSidebarTab } from '../types';
+import React, { useRef, useState } from 'react';
+import { CanvasElement, Project, AppSettings, LeftSidebarTab } from '../types';
 import { ElementRenderer } from './ElementRenderer';
 import { executeInteraction } from '../interactions/engine';
-import { v4 as uuidv4 } from 'uuid';
 import { Lock, EyeOff } from 'lucide-react';
+import { useCanvasDrag } from './useCanvasDrag';
+import { useCanvasDrop } from './useCanvasDrop';
 
 interface CanvasProps {
   project: Project;
@@ -37,253 +38,15 @@ export const Canvas: React.FC<CanvasProps> = ({
   const canvasRef = useRef<HTMLDivElement>(null);
   const [flashHotspots, setFlashHotspots] = useState(false);
   
-  const [dragInfo, setDragInfo] = useState<{
-    startX: number;
-    startY: number;
-    initialElements: { id: string; x: number; y: number; width: number; height: number }[];
-    isResizing: boolean;
-    resizeHandle?: string;
-  } | null>(null);
+  // Interaction/Drag Hook
+  const { handleMouseDown } = useCanvasDrag(
+      project, setProject, selectedElementIds, setSelectedElementIds, scale, isPreview, appSettings, setActiveLeftTab, setSelectedScreenIds, setSelectedScreenGroupIds
+  );
 
-  const snapValue = (val: number, gridSize: number, enabled: boolean) => {
-    if (!enabled || gridSize <= 0) return val;
-    return Math.round(val / gridSize) * gridSize;
-  };
-
-  const handleDrop = (e: React.DragEvent) => {
-    e.preventDefault();
-    if (isPreview) return;
-    if (activeScreen?.locked) {
-        alert("This screen is locked. Unlock it to add elements.");
-        return;
-    }
-
-    const dataString = e.dataTransfer.getData('componentData');
-    if (!dataString || !activeScreen) return;
-
-    try {
-        const item: LibraryItem = JSON.parse(dataString);
-        
-        const rect = canvasRef.current?.getBoundingClientRect();
-        if (!rect) return;
-
-        const dropX = (e.clientX - rect.left) / scale;
-        const dropY = (e.clientY - rect.top) / scale;
-
-        const finalX = snapValue(dropX - (item.defaultWidth / 2), project.gridConfig?.size || 10, project.gridConfig?.snapToGrid);
-        const finalY = snapValue(dropY - (item.defaultHeight / 2), project.gridConfig?.size || 10, project.gridConfig?.snapToGrid);
-
-        const newElements: CanvasElement[] = [];
-        const rootId = uuidv4();
-
-        // Create Root Element
-        const rootElement: CanvasElement = {
-          id: rootId,
-          type: item.type,
-          name: `${item.label} ${activeScreen.elements.length + 1}`,
-          x: finalX,
-          y: finalY,
-          width: item.defaultWidth,
-          height: item.defaultHeight,
-          zIndex: activeScreen.elements.length + 1,
-          props: { ...item.defaultProps },
-          style: { ...item.defaultStyle },
-          interactions: [],
-          // If it has children, start collapsed by default
-          collapsed: !!item.children
-        };
-        newElements.push(rootElement);
-
-        // Process Children if Hybrid Component
-        if (item.children) {
-            item.children.forEach((child, index) => {
-                newElements.push({
-                    id: uuidv4(),
-                    type: child.type,
-                    name: child.name,
-                    x: finalX + child.x,
-                    y: finalY + child.y,
-                    width: child.width,
-                    height: child.height,
-                    zIndex: activeScreen.elements.length + 1 + index + 1,
-                    props: { ...child.props },
-                    style: { ...child.style },
-                    interactions: [],
-                    parentId: rootId
-                });
-            });
-        }
-
-        const updatedScreens = (project.screens || []).map((s) =>
-          s.id === project.activeScreenId
-            ? { ...s, elements: [...s.elements, ...newElements] }
-            : s
-        );
-
-        setProject({ ...project, screens: updatedScreens });
-        setSelectedElementIds([rootId]);
-        if(setSelectedScreenIds) setSelectedScreenIds([]);
-        if(setSelectedScreenGroupIds) setSelectedScreenGroupIds([]);
-
-    } catch (err) {
-        console.error("Failed to parse dropped component data", err);
-    }
-  };
-
-  const handleDragOver = (e: React.DragEvent) => {
-    e.preventDefault();
-  };
-
-  const getDescendantIds = (parentId: string, allElements: CanvasElement[]): string[] => {
-      const children = allElements.filter(e => e.parentId === parentId);
-      let ids = children.map(c => c.id);
-      children.forEach(child => {
-          ids = [...ids, ...getDescendantIds(child.id, allElements)];
-      });
-      return ids;
-  };
-
-  const handleMouseDown = (e: React.MouseEvent, elementId: string, isResize: boolean = false, handleType: string = '') => {
-    if (isPreview) {
-      const element = activeScreen?.elements.find(el => el.id === elementId);
-      if (element?.interactions?.length) {
-          const context = {
-            project, 
-            setProject, 
-            navigate: (screenId: string) => {
-               setProject({...project, activeScreenId: screenId});
-            }
-          };
-          element.interactions.forEach(i => {
-              if (i.trigger === 'onClick') executeInteraction(i, context);
-          });
-      }
-      return;
-    }
-
-    e.stopPropagation();
-
-    if (appSettings?.autoNavigateToLayers && setActiveLeftTab) {
-        setActiveLeftTab('layers');
-    }
-
-    const element = activeScreen?.elements.find((el) => el.id === elementId);
-    if (!element) return;
-    if (element.locked || activeScreen?.locked) return;
-
-    // Clear Screen Selection to ensure properties panel shows layer properties
-    if (setSelectedScreenIds) setSelectedScreenIds([]);
-    if (setSelectedScreenGroupIds) setSelectedScreenGroupIds([]);
-
-    let newSelection = [...selectedElementIds];
-    
-    if (e.ctrlKey || e.metaKey || e.shiftKey) {
-        if (newSelection.includes(elementId)) {
-            newSelection = newSelection.filter(id => id !== elementId);
-        } else {
-            newSelection.push(elementId);
-        }
-    } else {
-        if (!newSelection.includes(elementId)) {
-            newSelection = [elementId];
-        }
-    }
-    
-    setSelectedElementIds(newSelection);
-
-    const allMovingIds = new Set<string>(newSelection);
-    
-    newSelection.forEach(selId => {
-        const descendants = getDescendantIds(selId, activeScreen?.elements || []);
-        descendants.forEach(d => allMovingIds.add(d));
-    });
-
-    const initialElementsState = (activeScreen?.elements || [])
-        .filter(el => allMovingIds.has(el.id))
-        .map(el => ({ 
-            id: el.id, 
-            x: el.x, 
-            y: el.y, 
-            width: el.width, 
-            height: el.height 
-        }));
-
-    setDragInfo({
-      startX: e.clientX,
-      startY: e.clientY,
-      initialElements: initialElementsState,
-      isResizing: isResize,
-      resizeHandle: handleType,
-    });
-  };
-
-  useEffect(() => {
-    const handleMouseMove = (e: MouseEvent) => {
-      if (!dragInfo || !activeScreen) return;
-
-      const deltaX = (e.clientX - dragInfo.startX) / scale;
-      const deltaY = (e.clientY - dragInfo.startY) / scale;
-      
-      const gridEnabled = project.gridConfig?.snapToGrid;
-      const gridSize = project.gridConfig?.size || 10;
-
-      const updatedScreens = (project.screens || []).map((s) => {
-        if (s.id !== project.activeScreenId) return s;
-
-        const updatedElements = (s.elements || []).map((el) => {
-          const initialState = dragInfo.initialElements.find(init => init.id === el.id);
-          if (!initialState) return el;
-
-          if (dragInfo.isResizing) {
-            if (selectedElementIds.length > 1) return el; 
-
-            let newW = initialState.width;
-            let newH = initialState.height;
-            
-            if (dragInfo.resizeHandle === 'se') {
-              newW = Math.max(10, initialState.width + deltaX);
-              newH = Math.max(10, initialState.height + deltaY);
-            }
-            
-            if(gridEnabled) {
-                newW = snapValue(newW, gridSize, true);
-                newH = snapValue(newH, gridSize, true);
-            }
-
-            return { ...el, width: newW, height: newH };
-          } else {
-            let newX = initialState.x + deltaX;
-            let newY = initialState.y + deltaY;
-
-            if (gridEnabled) {
-               newX = snapValue(newX, gridSize, true);
-               newY = snapValue(newY, gridSize, true);
-            }
-
-            return { ...el, x: newX, y: newY };
-          }
-        });
-
-        return { ...s, elements: updatedElements };
-      });
-
-      setProject({ ...project, screens: updatedScreens });
-    };
-
-    const handleMouseUp = () => {
-      setDragInfo(null);
-    };
-
-    if (dragInfo) {
-      window.addEventListener('mousemove', handleMouseMove);
-      window.addEventListener('mouseup', handleMouseUp);
-    }
-
-    return () => {
-      window.removeEventListener('mousemove', handleMouseMove);
-      window.removeEventListener('mouseup', handleMouseUp);
-    };
-  }, [dragInfo, project, scale, activeScreen, setProject, selectedElementIds]);
+  // Drag & Drop Hook
+  const { handleDrop, handleDragOver } = useCanvasDrop(
+      project, setProject, scale, canvasRef, isPreview, setSelectedElementIds, setSelectedScreenIds, setSelectedScreenGroupIds
+  );
 
   if (!activeScreen) return <div className="p-10 text-gray-400">No Screen Selected</div>;
 
@@ -319,6 +82,27 @@ export const Canvas: React.FC<CanvasProps> = ({
       }
   };
 
+  const handleElementClick = (e: React.MouseEvent, element: CanvasElement) => {
+      if (isPreview) {
+          // Preview Mode Interaction Execution
+          if (element.interactions && element.interactions.length > 0) {
+              e.stopPropagation(); // Stop propagation if interaction exists
+              const context = {
+                  project,
+                  setProject,
+                  navigate: (screenId: string) => {
+                      setProject({ ...project, activeScreenId: screenId });
+                  }
+              };
+              element.interactions.forEach(i => {
+                  if (i.trigger === 'onClick') executeInteraction(i, context);
+              });
+          }
+      } else {
+          e.stopPropagation(); // Stop propagation in Edit mode to prevent deselection
+      }
+  };
+
   return (
     <div
       id="canvas-root"
@@ -332,13 +116,7 @@ export const Canvas: React.FC<CanvasProps> = ({
       ref={canvasRef}
       onDrop={handleDrop}
       onDragOver={handleDragOver}
-      onClick={(e) => {
-          // Stop propagation here? No, let the App wrapper handle click away? 
-          // Actually, we handle "click on canvas background" here.
-          // App.tsx handles "click on gray area outside canvas".
-          // So we need to stop prop here if we handle logic.
-          handleCanvasBackgroundClick();
-      }}
+      onClick={handleCanvasBackgroundClick}
     >
       <div className="absolute inset-0 -z-10" style={{ backgroundColor: activeScreen.backgroundColor }} />
       
@@ -361,7 +139,6 @@ export const Canvas: React.FC<CanvasProps> = ({
       )}
 
       {(activeScreen.elements || []).map((element) => {
-        // Skip rendering if hidden
         if (!isElementVisible(element, activeScreen.elements)) return null;
 
         const isSelected = selectedElementIds.includes(element.id) && !isPreview;
@@ -387,18 +164,7 @@ export const Canvas: React.FC<CanvasProps> = ({
             onMouseEnter={(e) => { if(!isPreview && !isSelected) e.currentTarget.style.outline = '1px dashed #3b82f6'; }}
             onMouseLeave={(e) => { if(!isPreview && !isSelected) e.currentTarget.style.outline = 'transparent'; }}
             onMouseDown={(e) => handleMouseDown(e, element.id)}
-            onClick={(e) => {
-                // If preview mode and element has NO interaction, let the click propagate to canvas to trigger highlights?
-                // If it HAS interaction, prevent propagation so we don't flash highlights on valid clicks.
-                if (isPreview) {
-                    if (hasInteractions) {
-                        e.stopPropagation();
-                    }
-                    // Else allow propagation to background handler
-                } else {
-                    e.stopPropagation();
-                }
-            }}
+            onClick={(e) => handleElementClick(e, element)}
           >
             <ElementRenderer element={element} isPreview={isPreview} />
 
