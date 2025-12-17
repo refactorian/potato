@@ -1,4 +1,3 @@
-
 <!DOCTYPE html>
 <html lang="en">
   <head>
@@ -7,7 +6,6 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Potato - UI Prototyping</title>
     <script src="https://cdn.tailwindcss.com"></script>
-    <link rel="stylesheet" href="https://unpkg.com/react-image-crop/dist/ReactCrop.css" />
     <script>
       tailwind.config = {
         darkMode: 'class',
@@ -47,6 +45,29 @@
       .dark ::-webkit-scrollbar-thumb:hover {
         background: #64748b;
       }
+
+      /* Inlined react-image-crop CSS to fix CORS access errors during export */
+      .ReactCrop { position: relative; display: inline-block; cursor: crosshair; overflow: hidden; user-select: none; }
+      .ReactCrop--disabled { cursor: not-allowed; }
+      .ReactCrop--disabled .ReactCrop__component { pointer-events: none; }
+      .ReactCrop__image { display: block; max-width: 100%; }
+      .ReactCrop__crop-selection { position: absolute; top: 0; left: 0; transform: translate3d(0,0,0); box-sizing: border-box; cursor: move; border: 1px dashed rgba(255,255,255,0.5); box-shadow: 0 0 0 9999em rgba(0,0,0,0.5); z-index: 1; }
+      .ReactCrop--circular-crop .ReactCrop__crop-selection { border-radius: 50%; }
+      .ReactCrop__rule-of-thirds-vt::before, .ReactCrop__rule-of-thirds-vt::after, .ReactCrop__rule-of-thirds-hz::before, .ReactCrop__rule-of-thirds-hz::after { content: ''; position: absolute; background-color: rgba(255,255,255,0.2); }
+      .ReactCrop__rule-of-thirds-vt::before { top: 0; left: 33.33%; width: 1px; height: 100%; }
+      .ReactCrop__rule-of-thirds-vt::after { top: 0; left: 66.66%; width: 1px; height: 100%; }
+      .ReactCrop__rule-of-thirds-hz::before { top: 33.33%; left: 0; width: 100%; height: 1px; }
+      .ReactCrop__rule-of-thirds-hz::after { top: 66.66%; left: 0; width: 100%; height: 1px; }
+      .ReactCrop__drag-handle { position: absolute; width: 10px; height: 10px; background-color: rgba(0,0,0,0.2); border: 1px solid rgba(255,255,255,0.7); }
+      .ReactCrop__drag-handle:hover { background-color: rgba(0,0,0,0.5); }
+      .ord-nw { top: 0; left: 0; margin-top: -5px; margin-left: -5px; cursor: nw-resize; }
+      .ord-n { top: 0; left: 50%; margin-top: -5px; margin-left: -5px; cursor: n-resize; }
+      .ord-ne { top: 0; right: 0; margin-top: -5px; margin-right: -5px; cursor: ne-resize; }
+      .ord-e { top: 50%; right: 0; margin-top: -5px; margin-right: -5px; cursor: e-resize; }
+      .ord-se { bottom: 0; right: 0; margin-bottom: -5px; margin-right: -5px; cursor: se-resize; }
+      .ord-s { bottom: 0; left: 50%; margin-bottom: -5px; margin-left: -5px; cursor: s-resize; }
+      .ord-sw { bottom: 0; left: 0; margin-bottom: -5px; margin-left: -5px; cursor: sw-resize; }
+      .ord-w { top: 50%; left: 0; margin-top: -5px; margin-left: -5px; cursor: w-resize; }
     </style>
   <script type="importmap">
 {

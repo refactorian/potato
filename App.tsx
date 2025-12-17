@@ -4,7 +4,6 @@ import { TemplateDefinition, LeftSidebarTab, ExportConfig, ScreenImage } from '.
 import { Toolbar } from './components/Toolbar';
 import { SidebarLeft } from './components/SidebarLeft';
 import { SidebarRight } from './components/SidebarRight';
-import { FloatingToolbar } from './components/FloatingToolbar';
 import { Canvas } from './canvas/Canvas';
 import { ProjectOverview } from './components/ProjectOverview';
 import { TemplatePreviewArea } from './components/TemplatePreviewArea';
@@ -42,7 +41,6 @@ const App: React.FC = () => {
   const [exportConfig, setExportConfig] = useState<ExportConfig>({ isOpen: false, type: 'project' });
   const [activeLeftTab, setActiveLeftTab] = useState<LeftSidebarTab>('project');
   const [activeProjectSubTab, setActiveProjectSubTab] = useState<'screens' | 'task'>('screens');
-  const [activeTool, setActiveTool] = useState<string>('select');
   const [theme, setTheme] = useState<'light' | 'dark'>('dark');
   const [navHistory, setNavHistory] = useState<string[]>([]);
 
@@ -84,33 +82,6 @@ const App: React.FC = () => {
       }
     }
   }, [navHistory, setProject]);
-
-  const handleInsertElement = (tool: string) => {
-      if (tool === 'select') {
-          setActiveTool('select');
-          return;
-      }
-
-      const activeScreen = project.screens.find(s => s.id === project.activeScreenId);
-      if (activeScreen?.locked) {
-          alert("Screen is locked. Unlock to add elements.");
-          setActiveTool('select');
-          return;
-      }
-
-      const newElement = createNewElement(tool, project);
-
-      if (newElement) {
-          const updatedScreens = project.screens.map(s => 
-              s.id === project.activeScreenId 
-              ? { ...s, elements: [...s.elements, newElement] }
-              : s
-          );
-          setProject({ ...project, screens: updatedScreens });
-          setSelectedElementIds([newElement.id]);
-          setActiveTool('select');
-      }
-  };
 
   const handleBooleanOperation = (op: 'union' | 'subtract' | 'intersect' | 'exclude') => {
       const updatedProject = performBooleanOperation(op, selectedElementIds, project);
@@ -189,16 +160,6 @@ const App: React.FC = () => {
               navigateTo={navigateTo}
               goBack={goBack}
             />
-            
-            {/* Floating Toolbar */}
-            {!isPreview && (
-                <FloatingToolbar 
-                    activeTool={activeTool}
-                    onSelectTool={handleInsertElement}
-                    onBooleanOp={handleBooleanOperation}
-                    selectionCount={selectedElementIds.length}
-                />
-            )}
 
             {/* Preview Hotspots Toggle */}
             {isPreview && appSettings.showHotspots && (
@@ -272,7 +233,6 @@ const App: React.FC = () => {
             selectedElementIds={selectedElementIds}
             setSelectedElementIds={setSelectedElementIds}
             selectedScreenIds={selectedScreenIds}
-            // Fix: Pass missing selection setters to SidebarRight
             setSelectedScreenIds={setSelectedScreenIds}
             selectedScreenGroupIds={selectedScreenGroupIds}
             setSelectedScreenGroupIds={setSelectedScreenGroupIds}
