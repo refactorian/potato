@@ -27,7 +27,7 @@ const FONTS = [
     'Courier New, monospace'
 ];
 
-const ALL_SECTIONS = ['layout', 'appearance', 'typography', 'image', 'border', 'effects', 'navbar', 'button'];
+const ALL_SECTIONS = ['layout', 'appearance', 'typography', 'image', 'border', 'effects', 'navbar', 'button', 'icon-settings'];
 
 export const LayerProperties: React.FC<LayerPropertiesProps> = ({
   project,
@@ -40,16 +40,15 @@ export const LayerProperties: React.FC<LayerPropertiesProps> = ({
   const activeScreen = (project.screens || []).find(s => s.id === project.activeScreenId);
   const element = activeScreen?.elements?.find(el => el.id === selectedElementId);
 
-  // Auto-expand relevant sections when switching elements and reset state
   useEffect(() => {
     if (element) {
-        // Ensure standard sections are visible and add context-specific ones
         setExpandedSections(prev => {
             const next = new Set(['layout', 'appearance', ...prev]);
             if (element.type === 'image') next.add('image');
             if (element.type === 'text') next.add('typography');
             if (element.type === 'navbar') next.add('navbar');
             if (element.type === 'button') next.add('button');
+            if (element.type === 'icon') next.add('icon-settings');
             return Array.from(next);
         });
     }
@@ -115,7 +114,7 @@ export const LayerProperties: React.FC<LayerPropertiesProps> = ({
     const iconStyle: IconStyle = element.props[stylePropName] || {};
 
     return (
-        <div className="space-y-3">
+        <div className="space-y-3 bg-gray-50 dark:bg-gray-900/50 p-3 rounded-lg border border-gray-100 dark:border-gray-700 shadow-sm">
             <IconPickerControl 
                 label={label}
                 iconName={iconName}
@@ -123,14 +122,17 @@ export const LayerProperties: React.FC<LayerPropertiesProps> = ({
                 onClear={() => updateElement({ props: { [propName]: '' } })}
             />
             {iconName && (
-                <div className="bg-white dark:bg-gray-800 p-3 rounded-lg border border-gray-200 dark:border-gray-700 grid grid-cols-2 gap-3 shadow-sm">
+                <div className="grid grid-cols-2 gap-3 pt-2 border-t border-gray-100 dark:border-gray-800">
                      <div className="space-y-1">
                         <label className="text-[10px] text-gray-400 font-bold uppercase tracking-wider">Icon Color</label>
-                        <input type="color" className="w-full h-8 rounded border-none cursor-pointer overflow-hidden" value={iconStyle.color || element.style.color || '#000000'} onChange={e => updateElement({ props: { [stylePropName]: { ...iconStyle, color: e.target.value } } })} />
+                        <div className="flex gap-1.5 items-center">
+                            <input type="color" className="w-6 h-6 rounded border-none cursor-pointer p-0 overflow-hidden" value={iconStyle.color || element.style.color || '#000000'} onChange={e => updateElement({ props: { [stylePropName]: { ...iconStyle, color: e.target.value } } })} />
+                            <input type="text" className="flex-1 min-w-0 p-1 text-[10px] bg-white dark:bg-gray-800 border rounded font-mono uppercase" value={iconStyle.color || element.style.color || '#000000'} onChange={e => updateElement({ props: { [stylePropName]: { ...iconStyle, color: e.target.value } } })} />
+                        </div>
                      </div>
                      <div className="space-y-1">
                         <label className="text-[10px] text-gray-400 font-bold uppercase tracking-wider">Size (px)</label>
-                        <input type="number" className="w-full p-1.5 text-xs border rounded bg-gray-50 dark:bg-gray-700 dark:border-gray-600" value={iconStyle.size || ''} onChange={e => updateElement({ props: { [stylePropName]: { ...iconStyle, size: Number(e.target.value) } } })} />
+                        <input type="number" className="w-full p-1.5 text-xs border rounded bg-white dark:bg-gray-800 dark:border-gray-700" value={iconStyle.size || ''} placeholder="Inherit" onChange={e => updateElement({ props: { [stylePropName]: { ...iconStyle, size: Number(e.target.value) } } })} />
                      </div>
                 </div>
             )}
@@ -206,6 +208,10 @@ export const LayerProperties: React.FC<LayerPropertiesProps> = ({
                         <input type="range" min="0" max="1" step="0.05" className="w-full h-1 bg-gray-200 rounded-lg appearance-none cursor-pointer accent-indigo-600" value={element.style.opacity ?? 1} onChange={e => updateElement({ style: { opacity: Number(e.target.value) } })} />
                     </div>
                 </div>
+            </PropertySection>
+
+            <PropertySection id="icon-settings" label="Icon Details" icon={Sparkles} isVisible={element.type === 'icon'}>
+                {renderIconControl('Active Icon', 'iconName')}
             </PropertySection>
 
             <PropertySection id="typography" label="Typography" icon={Type} isVisible={['text', 'button', 'input', 'textarea', 'navbar', 'card'].includes(element.type)}>
@@ -399,7 +405,7 @@ export const LayerProperties: React.FC<LayerPropertiesProps> = ({
             </PropertySection>
 
             {element.type === 'navbar' && (
-                <PropertySection id="navbar" label="Navbar Props" icon={Baseline}>
+                <PropertySection id="navbar" label="Navbar Elements" icon={Baseline}>
                     <div className="space-y-4">
                         <div className="space-y-1">
                         <label className="text-[10px] text-gray-400 font-bold uppercase">Nav Title</label>
@@ -418,7 +424,7 @@ export const LayerProperties: React.FC<LayerPropertiesProps> = ({
                         <label className="text-[10px] text-gray-400 font-bold uppercase">Label</label>
                         <input type="text" className="w-full p-2 border rounded text-xs dark:bg-gray-700" value={element.props.text || ''} onChange={e => updateElement({ props: { text: e.target.value } })} />
                     </div>
-                    {renderIconControl('Leading Icon', 'icon')}
+                    {renderIconControl('Button Icon', 'icon')}
                   </div>
                </PropertySection>
             )}

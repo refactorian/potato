@@ -39,13 +39,17 @@ export const ElementRenderer: React.FC<ElementRendererProps> = ({ element, isPre
     borderLeftWidth: style.borderLeftWidth !== undefined ? `${style.borderLeftWidth}px` : undefined,
     borderRightWidth: style.borderRightWidth !== undefined ? `${style.borderRightWidth}px` : undefined,
     borderColor: style.borderColor,
+    borderTopColor: style.borderTopColor,
+    borderBottomColor: style.borderBottomColor,
+    borderLeftColor: style.borderLeftColor,
+    borderRightColor: style.borderRightColor,
     borderStyle: style.borderStyle || (hasBorder ? 'solid' : undefined),
     boxShadow: boxShadow,
     opacity: style.opacity,
     fontFamily: style.fontFamily,
     textAlign: style.textAlign,
     textDecoration: style.textDecoration,
-    padding: style.padding,
+    padding: typeof style.padding === 'number' ? `${style.padding}px` : style.padding,
     lineHeight: style.lineHeight,
     overflow: 'hidden',
     display: 'flex',
@@ -53,6 +57,7 @@ export const ElementRenderer: React.FC<ElementRendererProps> = ({ element, isPre
     justifyContent: 'center',
     alignItems: style.textAlign === 'center' ? 'center' : style.textAlign === 'right' ? 'flex-end' : 'flex-start',
     pointerEvents: isPreview ? 'auto' : 'none',
+    boxSizing: 'border-box'
   };
 
   const getIcon = (name: string) => (LucideIcons as any)[name] || null;
@@ -104,6 +109,8 @@ export const ElementRenderer: React.FC<ElementRendererProps> = ({ element, isPre
           placeholder={props.placeholder}
           style={{ ...commonStyle, cursor: isPreview ? 'text' : 'default' }}
           disabled={!isPreview}
+          value={isPreview ? undefined : ''}
+          readOnly={!isPreview}
         />
       );
     case 'textarea':
@@ -113,6 +120,8 @@ export const ElementRenderer: React.FC<ElementRendererProps> = ({ element, isPre
           rows={props.rows || 3}
           style={{ ...commonStyle, cursor: isPreview ? 'text' : 'default', resize: 'none' }}
           disabled={!isPreview}
+          value={isPreview ? undefined : ''}
+          readOnly={!isPreview}
         />
       );
     case 'checkbox':
@@ -130,9 +139,32 @@ export const ElementRenderer: React.FC<ElementRendererProps> = ({ element, isPre
     case 'toggle':
         return (
             <div style={{...commonStyle, display: 'flex', alignItems: 'center', padding: 4, justifyContent: props.checked ? 'flex-end' : 'flex-start', backgroundColor: props.checked ? style.backgroundColor : '#cbd5e1' }}>
-                <div style={{ height: element.height - 8, width: element.height - 8, backgroundColor: 'white', borderRadius: '50%', boxShadow: '0 2px 4px rgba(0,0,0,0.2)' }} />
+                <div style={{ height: Math.min(element.height, element.width) - 8, width: Math.min(element.height, element.width) - 8, backgroundColor: 'white', borderRadius: '50%', boxShadow: '0 2px 4px rgba(0,0,0,0.2)' }} />
             </div>
         )
+    case 'divider':
+        const isHorizontal = element.width >= element.height;
+        return (
+            <div style={{ 
+                ...commonStyle, 
+                backgroundColor: style.backgroundColor || '#e2e8f0',
+                height: isHorizontal ? (style.borderWidth || 1) : '100%',
+                width: isHorizontal ? '100%' : (style.borderWidth || 1)
+            }} />
+        );
+    case 'progress':
+        const progress = Math.min(100, Math.max(0, props.value || 0));
+        return (
+            <div style={{ ...commonStyle, backgroundColor: '#f1f5f9', padding: 0, justifyContent: 'flex-start', overflow: 'hidden' }}>
+                <div style={{ width: `${progress}%`, height: '100%', backgroundColor: style.backgroundColor || '#3b82f6', transition: 'width 0.3s ease' }} />
+            </div>
+        );
+    case 'badge':
+        return (
+            <div style={{ ...commonStyle, padding: '2px 8px', borderRadius: style.borderRadius ?? 9999, alignItems: 'center', justifyContent: 'center', fontSize: style.fontSize || 10, fontWeight: 'bold' }}>
+                {props.text}
+            </div>
+        );
     case 'image':
       return (
         <img
@@ -187,13 +219,25 @@ export const ElementRenderer: React.FC<ElementRendererProps> = ({ element, isPre
       );
     case 'card':
       return (
-        <div style={{ ...commonStyle, justifyContent: 'flex-start', alignItems: 'flex-start' }}>
-          <h3 className="font-bold text-lg mb-2">{props.title}</h3>
-          <p className="text-sm opacity-75">{props.subtitle}</p>
+        <div style={{ ...commonStyle, justifyContent: 'flex-start', alignItems: 'flex-start', padding: style.padding ?? 16 }}>
+          <h3 className="font-bold text-lg mb-2" style={{ color: style.color }}>{props.title}</h3>
+          <p className="text-sm opacity-75" style={{ color: style.color }}>{props.subtitle}</p>
         </div>
       );
     case 'circle':
-        return <div style={{...commonStyle, borderRadius: '50%'}} />;
+        return (
+            <div style={{
+                ...commonStyle, 
+                borderRadius: '50%',
+                borderTopLeftRadius: '50%',
+                borderTopRightRadius: '50%',
+                borderBottomLeftRadius: '50%',
+                borderBottomRightRadius: '50%',
+                alignItems: 'center', 
+                justifyContent: 'center',
+                overflow: 'hidden'
+            }} />
+        );
     case 'group':
     case 'container':
     default:

@@ -1,5 +1,7 @@
 
-export type ComponentType = 'group' | 'container' | 'button' | 'text' | 'input' | 'textarea' | 'image' | 'video' | 'navbar' | 'card' | 'icon' | 'circle' | 'checkbox' | 'radio' | 'toggle';
+
+
+export type ComponentType = 'group' | 'container' | 'button' | 'text' | 'input' | 'textarea' | 'image' | 'video' | 'navbar' | 'card' | 'icon' | 'circle' | 'checkbox' | 'radio' | 'toggle' | 'divider' | 'progress' | 'badge';
 
 export type LeftSidebarTab = 'screens' | 'layers' | 'canvas' | 'project' | 'settings';
 
@@ -14,7 +16,13 @@ export interface ComponentStyle {
   borderBottomRightRadius?: number;
   borderWidth?: number;
   borderColor?: string;
-  padding?: number;
+  // Added specific border color properties to support partial border coloring (e.g., for loading spinners)
+  borderTopColor?: string;
+  borderBottomColor?: string;
+  borderLeftColor?: string;
+  borderRightColor?: string;
+  // Fix: Changed padding from number to number | string to support CSS shorthand notation (e.g., '0 16px')
+  padding?: number | string;
   shadow?: boolean;
   shadowOffsetX?: number;
   shadowOffsetY?: number;
@@ -124,6 +132,28 @@ export interface Project {
   screens: Screen[];
   assets: Asset[];
   screenGroups: ScreenGroup[];
+}
+
+export interface LibraryItemChild {
+    type: ComponentType;
+    name: string;
+    x: number;
+    y: number;
+    width: number;
+    height: number;
+    props: Record<string, any>;
+    style: ComponentStyle;
+}
+
+export interface LibraryItem {
+  type: ComponentType;
+  label: string;
+  icon: string; // Lucide icon name
+  defaultWidth: number;
+  defaultHeight: number;
+  defaultProps: Record<string, any>;
+  defaultStyle: ComponentStyle;
+  children?: LibraryItemChild[]; // For hybrid components that come with pre-defined children (e.g. Card with text/buttons)
 }
 
 export interface LibraryItemChild {
