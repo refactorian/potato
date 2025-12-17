@@ -1,6 +1,6 @@
 
 import React, { useState, useEffect } from 'react';
-import { MonitorPlay, ZoomIn, ZoomOut, Moon, Sun, ChevronDown, Plus, Check, Folder, Loader2 } from 'lucide-react';
+import { MonitorPlay, ZoomIn, ZoomOut, Moon, Sun, ChevronDown, Plus, Check, Folder } from 'lucide-react';
 import * as LucideIcons from 'lucide-react';
 import { Project } from '../types';
 
@@ -36,6 +36,8 @@ export const Toolbar: React.FC<ToolbarProps> = ({
   const [isSwitcherOpen, setIsSwitcherOpen] = useState(false);
   const [projectsList, setProjectsList] = useState<ProjectMetadata[]>([]);
 
+  const activeScreen = project.screens.find(s => s.id === project.activeScreenId);
+
   useEffect(() => {
     const loadProjects = () => {
        const str = localStorage.getItem('potato_projects_index');
@@ -49,7 +51,7 @@ export const Toolbar: React.FC<ToolbarProps> = ({
        }
     };
     loadProjects();
-  }, [project.id, project.lastModified, isSwitcherOpen]); // Re-load when current project updates or menu opens
+  }, [project.id, project.lastModified, isSwitcherOpen]);
 
   useEffect(() => {
     const handleClickOutside = () => setIsSwitcherOpen(false);
@@ -83,17 +85,14 @@ export const Toolbar: React.FC<ToolbarProps> = ({
       
       {/* Left Section: Branding & Project Switcher */}
       <div className="flex items-center gap-4">
-        {/* Branding Logo */}
         <div className="flex items-center gap-2 font-bold text-gray-800 dark:text-white text-xl mr-2">
           <div className="w-8 h-8 bg-indigo-600 rounded-lg flex items-center justify-center text-white shadow-sm overflow-hidden">
             {ProjectIcon ? <ProjectIcon size={20} /> : <span className="font-mono text-lg">P</span>}
           </div>
         </div>
 
-        {/* Divider */}
         <div className="h-6 w-px bg-gray-300 dark:bg-gray-600" />
 
-        {/* Project Switcher */}
         <div className="relative">
             <button 
                 onClick={(e) => { e.stopPropagation(); setIsSwitcherOpen(!isSwitcherOpen); }}
@@ -107,7 +106,6 @@ export const Toolbar: React.FC<ToolbarProps> = ({
                 <ChevronDown size={14} className={`text-gray-400 transition-transform duration-200 ${isSwitcherOpen ? 'rotate-180' : ''}`} />
             </button>
 
-            {/* Dropdown Menu */}
             {isSwitcherOpen && (
                 <div className="absolute top-full left-0 mt-2 w-64 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg shadow-xl z-50 animate-in fade-in slide-in-from-top-1 duration-150 overflow-hidden flex flex-col">
                     <div className="px-3 py-2 text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider border-b border-gray-100 dark:border-gray-700 bg-gray-50 dark:bg-gray-850">
@@ -145,7 +143,6 @@ export const Toolbar: React.FC<ToolbarProps> = ({
             )}
         </div>
 
-        {/* Quick Create Action */}
         <button 
             onClick={onOpenCreateModal}
             className="p-1.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-md shadow-sm transition-colors flex items-center justify-center"
@@ -155,9 +152,22 @@ export const Toolbar: React.FC<ToolbarProps> = ({
         </button>
       </div>
 
+      {/* Center Section: Active Screen Name (Preview Only) */}
+      {isPreview && (
+          <div className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 flex items-center justify-center pointer-events-none z-10">
+              <div className="flex items-center gap-3 px-5 py-1.5 bg-indigo-50/80 dark:bg-indigo-900/30 border border-indigo-100/50 dark:border-indigo-800/50 rounded-full backdrop-blur-md shadow-sm animate-in fade-in slide-in-from-top-2 duration-300 pointer-events-auto">
+                  <div className="flex items-center gap-2">
+                    <div className="w-1.5 h-1.5 rounded-full bg-indigo-500 animate-pulse" />
+                    <span className="text-[9px] font-black text-indigo-600/60 dark:text-indigo-400/60 uppercase tracking-[0.2em]">Live Preview</span>
+                  </div>
+                  <div className="h-3 w-px bg-indigo-200 dark:bg-indigo-800 mx-1" />
+                  <span className="text-sm font-bold text-gray-800 dark:text-gray-100">{activeScreen?.name || 'Untitled Screen'}</span>
+              </div>
+          </div>
+      )}
+
       {/* Right Section: Tools & Settings */}
       <div className="flex items-center gap-4">
-        {/* Theme Toggle */}
         <button
             onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')}
             className="p-2 text-gray-500 dark:text-gray-400 hover:text-indigo-600 dark:hover:text-indigo-400 transition-colors rounded-full hover:bg-gray-100 dark:hover:bg-gray-700"
@@ -166,7 +176,6 @@ export const Toolbar: React.FC<ToolbarProps> = ({
             {theme === 'dark' ? <Sun size={20} /> : <Moon size={20} />}
         </button>
 
-        {/* Zoom Controls */}
         <div className="flex items-center gap-2 text-sm text-gray-600 dark:text-gray-300 bg-gray-50 dark:bg-gray-700 px-2 py-1 rounded-lg border border-gray-200 dark:border-gray-600 transition-colors duration-200">
           <button onClick={() => setScale(Math.max(0.25, scale - 0.1))} className="hover:text-indigo-600 dark:hover:text-indigo-400 p-1">
              <ZoomOut size={16} />
@@ -177,7 +186,6 @@ export const Toolbar: React.FC<ToolbarProps> = ({
           </button>
         </div>
 
-        {/* Preview Button */}
         <button
           onClick={() => setIsPreview(!isPreview)}
           className={`flex items-center gap-2 px-4 py-2 rounded-lg font-medium transition-colors shadow-sm text-sm ${

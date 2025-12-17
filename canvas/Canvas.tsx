@@ -19,6 +19,8 @@ interface CanvasProps {
   appSettings?: AppSettings;
   setActiveLeftTab?: (tab: LeftSidebarTab) => void;
   alwaysShowHotspots?: boolean;
+  navigateTo?: (screenId: string) => void;
+  goBack?: () => void;
 }
 
 export const Canvas: React.FC<CanvasProps> = ({
@@ -32,7 +34,9 @@ export const Canvas: React.FC<CanvasProps> = ({
   isPreview,
   appSettings,
   setActiveLeftTab,
-  alwaysShowHotspots
+  alwaysShowHotspots,
+  navigateTo,
+  goBack
 }) => {
   const activeScreen = (project.screens || []).find((s) => s.id === project.activeScreenId);
   const canvasRef = useRef<HTMLDivElement>(null);
@@ -71,27 +75,28 @@ export const Canvas: React.FC<CanvasProps> = ({
 
   const handleCanvasBackgroundClick = () => {
       if (isPreview) {
-          // If in preview and settings allow, flash hotspots
           if (appSettings?.showHotspots && !alwaysShowHotspots) {
               setFlashHotspots(true);
               setTimeout(() => setFlashHotspots(false), 400);
           }
       } else {
-          // If in edit mode, clear selection
           setSelectedElementIds([]);
       }
   };
 
   const handleElementClick = (e: React.MouseEvent, element: CanvasElement) => {
       if (isPreview) {
-          // Preview Mode Interaction Execution
           if (element.interactions && element.interactions.length > 0) {
-              e.stopPropagation(); // Stop propagation if interaction exists
+              e.stopPropagation();
               const context = {
                   project,
                   setProject,
                   navigate: (screenId: string) => {
-                      setProject({ ...project, activeScreenId: screenId });
+                      if (navigateTo) navigateTo(screenId);
+                      else setProject({ ...project, activeScreenId: screenId });
+                  },
+                  goBack: () => {
+                      if (goBack) goBack();
                   }
               };
               element.interactions.forEach(i => {
@@ -99,7 +104,7 @@ export const Canvas: React.FC<CanvasProps> = ({
               });
           }
       } else {
-          e.stopPropagation(); // Stop propagation in Edit mode to prevent deselection
+          e.stopPropagation();
       }
   };
 
@@ -124,14 +129,12 @@ export const Canvas: React.FC<CanvasProps> = ({
         <div className="absolute inset-0 pointer-events-none z-0" style={gridStyle} />
       )}
 
-      {/* Screen Locked Indicator */}
       {!isPreview && activeScreen.locked && (
           <div className="absolute inset-0 border-4 border-red-500/30 z-50 pointer-events-none flex items-start justify-end p-2">
               <Lock size={24} className="text-red-500/50" />
           </div>
       )}
 
-      {/* Screen Hidden Indicator (Only in Edit Mode) */}
       {!isPreview && activeScreen.hidden && (
           <div className="absolute inset-0 border-4 border-gray-500/30 z-50 pointer-events-none flex items-start justify-start p-2">
               <EyeOff size={24} className="text-gray-500/50" />
@@ -168,7 +171,6 @@ export const Canvas: React.FC<CanvasProps> = ({
           >
             <ElementRenderer element={element} isPreview={isPreview} />
 
-            {/* Hotspot Overlay */}
             {(isFlash || isPersistent) && (
                 <div className={`absolute inset-0 z-50 pointer-events-none rounded-sm transition-all duration-200 ${
                     isFlash 

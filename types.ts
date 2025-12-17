@@ -8,21 +8,33 @@ export interface ComponentStyle {
   color?: string;
   fontSize?: number;
   borderRadius?: number;
+  borderTopLeftRadius?: number;
+  borderTopRightRadius?: number;
+  borderBottomLeftRadius?: number;
+  borderBottomRightRadius?: number;
   borderWidth?: number;
   borderColor?: string;
   padding?: number;
   shadow?: boolean;
+  shadowOffsetX?: number;
+  shadowOffsetY?: number;
+  shadowBlur?: number;
+  shadowSpread?: number;
+  shadowColor?: string;
   opacity?: number;
   fontFamily?: string;
   textAlign?: 'left' | 'center' | 'right';
-  fontWeight?: 'normal' | 'bold';
+  fontWeight?: string | number;
+  fontStyle?: 'normal' | 'italic';
+  textTransform?: 'none' | 'uppercase' | 'lowercase' | 'capitalize';
+  letterSpacing?: number;
   display?: string;
   alignItems?: string;
   justifyContent?: string;
   strokeWidth?: number;
   absoluteStrokeWidth?: boolean;
   lineHeight?: number;
-  borderStyle?: string;
+  borderStyle?: 'solid' | 'dashed' | 'dotted';
   borderTopWidth?: number;
   borderBottomWidth?: number;
   borderLeftWidth?: number;
@@ -37,11 +49,13 @@ export interface IconStyle {
   absoluteStrokeWidth?: boolean;
 }
 
+export type InteractionAction = 'navigate' | 'back' | 'alert' | 'url' | 'none';
+
 export interface Interaction {
   id: string;
   trigger: 'onClick';
-  action: 'navigate' | 'alert';
-  payload?: string; // e.g., screenId for navigation
+  action: InteractionAction;
+  payload?: string; // e.g., screenId, message, or url
 }
 
 export interface CanvasElement {

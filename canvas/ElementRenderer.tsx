@@ -13,6 +13,11 @@ export const ElementRenderer: React.FC<ElementRendererProps> = ({ element, isPre
 
   const hasBorder = style.borderWidth || style.borderTopWidth !== undefined || style.borderBottomWidth !== undefined || style.borderLeftWidth !== undefined || style.borderRightWidth !== undefined;
 
+  // Shadow generation
+  const boxShadow = style.shadow ? 
+    `${style.shadowOffsetX || 0}px ${style.shadowOffsetY || 4}px ${style.shadowBlur || 6}px ${style.shadowSpread || -1}px ${style.shadowColor || 'rgba(0,0,0,0.1)'}` : 
+    'none';
+
   const commonStyle: React.CSSProperties = {
     width: '100%',
     height: '100%',
@@ -20,15 +25,22 @@ export const ElementRenderer: React.FC<ElementRendererProps> = ({ element, isPre
     color: style.color,
     fontSize: style.fontSize,
     fontWeight: style.fontWeight,
-    borderRadius: style.borderRadius,
+    fontStyle: style.fontStyle,
+    textTransform: style.textTransform,
+    letterSpacing: style.letterSpacing ? `${style.letterSpacing}px` : undefined,
+    borderRadius: style.borderRadius !== undefined ? `${style.borderRadius}px` : undefined,
+    borderTopLeftRadius: style.borderTopLeftRadius !== undefined ? `${style.borderTopLeftRadius}px` : undefined,
+    borderTopRightRadius: style.borderTopRightRadius !== undefined ? `${style.borderTopRightRadius}px` : undefined,
+    borderBottomLeftRadius: style.borderBottomLeftRadius !== undefined ? `${style.borderBottomLeftRadius}px` : undefined,
+    borderBottomRightRadius: style.borderBottomRightRadius !== undefined ? `${style.borderBottomRightRadius}px` : undefined,
     borderWidth: style.borderWidth ? `${style.borderWidth}px` : undefined,
     borderTopWidth: style.borderTopWidth !== undefined ? `${style.borderTopWidth}px` : undefined,
     borderBottomWidth: style.borderBottomWidth !== undefined ? `${style.borderBottomWidth}px` : undefined,
     borderLeftWidth: style.borderLeftWidth !== undefined ? `${style.borderLeftWidth}px` : undefined,
     borderRightWidth: style.borderRightWidth !== undefined ? `${style.borderRightWidth}px` : undefined,
     borderColor: style.borderColor,
-    borderStyle: style.borderStyle || (hasBorder ? 'solid' : undefined), // Check specifically for group/container style logic later
-    boxShadow: style.shadow ? '0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06)' : 'none',
+    borderStyle: style.borderStyle || (hasBorder ? 'solid' : undefined),
+    boxShadow: boxShadow,
     opacity: style.opacity,
     fontFamily: style.fontFamily,
     textAlign: style.textAlign,
@@ -40,21 +52,15 @@ export const ElementRenderer: React.FC<ElementRendererProps> = ({ element, isPre
     flexDirection: 'column',
     justifyContent: 'center',
     alignItems: style.textAlign === 'center' ? 'center' : style.textAlign === 'right' ? 'flex-end' : 'flex-start',
-    pointerEvents: isPreview ? 'auto' : 'none', // Allow events in preview, block in editor (parent handles selection)
+    pointerEvents: isPreview ? 'auto' : 'none',
   };
-
-  // Special handling for container/group to allow dashed borders if specified (visual grouping)
-  if ((type === 'container' || type === 'group') && style.borderStyle) {
-      commonStyle.borderStyle = style.borderStyle;
-  }
 
   const getIcon = (name: string) => (LucideIcons as any)[name] || null;
 
-  // Helper to extract specific icon props or fallback to global
   const getIconProps = (specificStyle?: IconStyle) => {
       return {
           color: specificStyle?.color || style.color,
-          size: specificStyle?.size || (style.fontSize || 16) + 4, // Default sizing logic
+          size: specificStyle?.size || (style.fontSize || 16) + 4,
           strokeWidth: specificStyle?.strokeWidth ?? style.strokeWidth ?? 2,
           absoluteStrokeWidth: specificStyle?.absoluteStrokeWidth ?? style.absoluteStrokeWidth,
       };
@@ -65,14 +71,12 @@ export const ElementRenderer: React.FC<ElementRendererProps> = ({ element, isPre
   const RightIcon = props.rightIcon ? getIcon(props.rightIcon) : null;
   const BtnIcon = props.icon ? getIcon(props.icon) : null;
 
-  // Icon Styles
   const iconStyle = props.iconStyle as IconStyle | undefined;
   const leftIconStyle = props.leftIconStyle as IconStyle | undefined;
   const rightIconStyle = props.rightIconStyle as IconStyle | undefined;
 
   switch (type) {
     case 'button':
-      // Button icon uses 'icon' prop and 'iconStyle' (mapped from properties panel logic)
       const btnIconProps = getIconProps(iconStyle);
       return (
         <button style={{ 
@@ -89,7 +93,7 @@ export const ElementRenderer: React.FC<ElementRendererProps> = ({ element, isPre
       );
     case 'text':
       return (
-        <div style={{ ...commonStyle, alignItems: 'flex-start', justifyContent: 'flex-start', overflow: 'visible' }}>
+        <div style={{ ...commonStyle, alignItems: 'flex-start', justifyContent: 'flex-start', overflow: 'visible', whiteSpace: 'pre-wrap' }}>
           {props.text}
         </div>
       );
@@ -156,7 +160,6 @@ export const ElementRenderer: React.FC<ElementRendererProps> = ({ element, isPre
       );
     case 'icon':
       const standaloneIconProps = getIconProps(iconStyle);
-      // For standalone icon, default to filling the box if no size set, or use prop size
       const iconSize = iconStyle?.size || Math.min(element.width, element.height) * 0.8;
       
       return (

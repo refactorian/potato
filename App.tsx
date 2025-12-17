@@ -1,5 +1,5 @@
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { TemplateDefinition, LeftSidebarTab, ExportConfig, ScreenImage } from './types';
 import { Toolbar } from './components/Toolbar';
 import { SidebarLeft } from './components/SidebarLeft';
@@ -44,6 +44,7 @@ const App: React.FC = () => {
   const [activeProjectSubTab, setActiveProjectSubTab] = useState<'screens' | 'task'>('screens');
   const [activeTool, setActiveTool] = useState<string>('select');
   const [theme, setTheme] = useState<'light' | 'dark'>('dark');
+  const [navHistory, setNavHistory] = useState<string[]>([]);
 
   // Theme Effect
   useEffect(() => {
@@ -64,8 +65,25 @@ const App: React.FC = () => {
       if (!value) {
           setActiveLeftTab('screens');
           setShowHotspotsPersistent(false);
+          setNavHistory([]); // Clear history when leaving preview
       }
   };
+
+  const navigateTo = useCallback((screenId: string) => {
+    setNavHistory(prev => [...prev, project.activeScreenId]);
+    setProject(prev => ({ ...prev, activeScreenId: screenId }));
+  }, [project.activeScreenId, setProject]);
+
+  const goBack = useCallback(() => {
+    if (navHistory.length > 0) {
+      const newHistory = [...navHistory];
+      const prevId = newHistory.pop();
+      if (prevId) {
+        setNavHistory(newHistory);
+        setProject(prev => ({ ...prev, activeScreenId: prevId }));
+      }
+    }
+  }, [navHistory, setProject]);
 
   const handleInsertElement = (tool: string) => {
       if (tool === 'select') {
@@ -168,6 +186,8 @@ const App: React.FC = () => {
               appSettings={appSettings}
               setActiveLeftTab={setActiveLeftTab}
               alwaysShowHotspots={showHotspotsPersistent}
+              navigateTo={navigateTo}
+              goBack={goBack}
             />
             
             {/* Floating Toolbar */}
@@ -250,8 +270,12 @@ const App: React.FC = () => {
             project={project}
             setProject={setProject}
             selectedElementIds={selectedElementIds}
+            setSelectedElementIds={setSelectedElementIds}
             selectedScreenIds={selectedScreenIds}
+            // Fix: Pass missing selection setters to SidebarRight
+            setSelectedScreenIds={setSelectedScreenIds}
             selectedScreenGroupIds={selectedScreenGroupIds}
+            setSelectedScreenGroupIds={setSelectedScreenGroupIds}
             onPreviewTemplate={(template) => setPreviewTemplate(template)}
             onPreviewScreenImage={(image) => setPreviewImage(image)}
             appSettings={appSettings}
