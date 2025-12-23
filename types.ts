@@ -1,5 +1,6 @@
 
-export type ComponentType = 'group' | 'container' | 'button' | 'text' | 'input' | 'textarea' | 'image' | 'video' | 'navbar' | 'card' | 'icon' | 'circle' | 'checkbox' | 'radio' | 'toggle' | 'divider' | 'progress' | 'badge';
+
+export type ComponentType = 'group' | 'container' | 'button' | 'text' | 'input' | 'textarea' | 'image' | 'video' | 'icon' | 'circle' | 'checkbox' | 'radio' | 'toggle' | 'divider' | 'progress' | 'badge' | 'navbar' | 'card';
 
 export type LeftSidebarTab = 'screens' | 'layers' | 'canvas' | 'project' | 'settings' | 'history';
 

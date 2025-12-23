@@ -1,6 +1,6 @@
 
 import React, { useState, useEffect } from 'react';
-import { FolderPlus, MoreVertical, Edit2, Copy, Trash2, ChevronRight, ChevronDown, File, FolderOpen, Lock, Unlock, GripVertical, Group, ListChecks, Image as ImageIcon, FolderOutput, Ungroup, CheckSquare, XSquare, Eye, EyeOff } from 'lucide-react';
+import { FolderPlus, MoreVertical, Edit2, Copy, Trash2, ChevronRight, ChevronDown, File, FolderOpen, Lock, Unlock, GripVertical, Group, ListChecks, Image as ImageIcon, FolderOutput, Ungroup, CheckSquare, XSquare, Eye, EyeOff, Monitor } from 'lucide-react';
 import { Project, CanvasElement, AppSettings, ExportConfig } from '../../types';
 import { v4 as uuidv4 } from 'uuid';
 import { RenameModal } from '../modals/RenameModal';
@@ -13,15 +13,16 @@ interface LayersMenuProps {
   setSelectedElementIds: (ids: string[]) => void;
   setSelectedScreenIds?: (ids: string[]) => void;
   setSelectedScreenGroupIds?: (ids: string[]) => void;
+  selectedScreenIds: string[];
   appSettings?: AppSettings;
   onExport: (config: Omit<ExportConfig, 'isOpen'>) => void;
 }
 
-type ItemType = 'layer' | 'layerGroup';
+type ItemType = 'layer' | 'layerGroup' | 'canvas';
 
 export const LayersMenu: React.FC<LayersMenuProps> = ({ 
     project, setProject, selectedElementIds, setSelectedElementIds, 
-    setSelectedScreenIds, setSelectedScreenGroupIds, appSettings, onExport 
+    setSelectedScreenIds, setSelectedScreenGroupIds, selectedScreenIds, appSettings, onExport 
 }) => {
   const activeScreen = (project.screens || []).find(s => s.id === project.activeScreenId);
   const [activeMenu, setActiveMenu] = useState<{ id: string; type: ItemType; x: number; y: number } | null>(null);
@@ -49,10 +50,17 @@ export const LayersMenu: React.FC<LayersMenuProps> = ({
       return el.type === 'group'; 
   };
 
+  const handleCanvasLayerClick = (e: React.MouseEvent) => {
+      e.stopPropagation();
+      setSelectedElementIds([]);
+      if (setSelectedScreenIds) setSelectedScreenIds([project.activeScreenId]);
+      if (setSelectedScreenGroupIds) setSelectedScreenGroupIds([]);
+  };
+
   const handleLayerClick = (e: React.MouseEvent, layer: CanvasElement) => {
       e.stopPropagation();
       
-      // Clear Screen Selection
+      // Clear Screen Selection when a layer is clicked
       if (setSelectedScreenIds) setSelectedScreenIds([]);
       if (setSelectedScreenGroupIds) setSelectedScreenGroupIds([]);
 
@@ -187,11 +195,16 @@ export const LayersMenu: React.FC<LayersMenuProps> = ({
   const handleMenuTrigger = (e: React.MouseEvent, id: string, type: ItemType) => {
     e.stopPropagation(); e.preventDefault();
     
-    // Select this item and ensure screen selections are cleared
-    if (!selectedElementIds.includes(id)) {
-        setSelectedElementIds([id]);
+    if (type === 'canvas') {
+        if (setSelectedScreenIds) setSelectedScreenIds([id]);
+        setSelectedElementIds([]);
+    } else {
+        if (!selectedElementIds.includes(id)) {
+            setSelectedElementIds([id]);
+        }
+        if (setSelectedScreenIds) setSelectedScreenIds([]);
     }
-    if (setSelectedScreenIds) setSelectedScreenIds([]);
+    
     if (setSelectedScreenGroupIds) setSelectedScreenGroupIds([]);
 
     const rect = (e.currentTarget as HTMLElement).getBoundingClientRect();
@@ -200,20 +213,32 @@ export const LayersMenu: React.FC<LayersMenuProps> = ({
 
   const toggleLock = () => {
       if (!activeMenu) return;
-      const idsToLock = selectedElementIds.includes(activeMenu.id) ? selectedElementIds : [activeMenu.id];
-      const updatedScreens = project.screens.map(s => {
-          if (s.id !== project.activeScreenId) return s;
-          return {
-              ...s,
-              elements: s.elements.map(el => idsToLock.includes(el.id) ? { ...el, locked: !el.locked } : el)
-          };
-      });
-      setProject({ ...project, screens: updatedScreens });
+      if (activeMenu.type === 'canvas') {
+          const updatedScreens = project.screens.map(s => s.id === activeMenu.id ? { ...s, locked: !s.locked } : s);
+          setProject({ ...project, screens: updatedScreens });
+      } else {
+          const idsToLock = selectedElementIds.includes(activeMenu.id) ? selectedElementIds : [activeMenu.id];
+          const updatedScreens = project.screens.map(s => {
+              if (s.id !== project.activeScreenId) return s;
+              return {
+                  ...s,
+                  elements: s.elements.map(el => idsToLock.includes(el.id) ? { ...el, locked: !el.locked } : el)
+              };
+          });
+          setProject({ ...project, screens: updatedScreens });
+      }
       setActiveMenu(null);
   };
 
   const toggleHidden = (e?: React.MouseEvent, layerId?: string) => {
       e?.stopPropagation();
+      if (!layerId && activeMenu?.type === 'canvas') {
+          const updatedScreens = project.screens.map(s => s.id === activeMenu.id ? { ...s, hidden: !s.hidden } : s);
+          setProject({ ...project, screens: updatedScreens });
+          setActiveMenu(null);
+          return;
+      }
+
       const idsToHide = layerId 
         ? [layerId] 
         : (activeMenu && selectedElementIds.includes(activeMenu.id) ? selectedElementIds : (activeMenu ? [activeMenu.id] : []));
@@ -270,7 +295,9 @@ export const LayersMenu: React.FC<LayersMenuProps> = ({
 
   const handleExportLayer = () => {
       if (!activeMenu) return;
-      if (selectedElementIds.length > 1) {
+      if (activeMenu.type === 'canvas') {
+          onExport({ type: 'screen', targetId: activeMenu.id });
+      } else if (selectedElementIds.length > 1) {
           onExport({ type: 'layer', targetIds: selectedElementIds });
       } else {
           onExport({ type: 'layer', targetId: activeMenu.id });
@@ -278,12 +305,37 @@ export const LayersMenu: React.FC<LayersMenuProps> = ({
       setActiveMenu(null);
   };
 
-  const triggerRename = () => { if(activeMenu) setRenameModal({isOpen:true, id:activeMenu.id, type:activeMenu.type, currentName: activeScreen?.elements.find(e=>e.id===activeMenu.id)?.name||''}); setActiveMenu(null); };
+  const triggerRename = () => { 
+      if (!activeMenu) return;
+      let name = '';
+      if (activeMenu.type === 'canvas') {
+          name = activeScreen?.name || '';
+      } else {
+          name = activeScreen?.elements.find(e => e.id === activeMenu.id)?.name || '';
+      }
+      setRenameModal({ isOpen: true, id: activeMenu.id, type: activeMenu.type, currentName: name });
+      setActiveMenu(null); 
+  };
   
-  const executeRename = (n: string) => { if(renameModal) { const updatedScreens = project.screens.map(s => s.id === project.activeScreenId ? { ...s, elements: s.elements.map(el => el.id === renameModal.id ? { ...el, name: n } : el) } : s); setProject({...project, screens: updatedScreens}); setRenameModal(null); }};
+  const executeRename = (n: string) => { 
+      if (!renameModal) return;
+      if (renameModal.type === 'canvas') {
+          const updatedScreens = project.screens.map(s => s.id === renameModal.id ? { ...s, name: n } : s);
+          setProject({ ...project, screens: updatedScreens });
+      } else {
+          const updatedScreens = project.screens.map(s => s.id === project.activeScreenId ? { ...s, elements: s.elements.map(el => el.id === renameModal.id ? { ...el, name: n } : el) } : s);
+          setProject({...project, screens: updatedScreens}); 
+      }
+      setRenameModal(null); 
+  };
   
   const triggerDelete = () => { 
       if(activeMenu) {
+          if (activeMenu.type === 'canvas') {
+              alert("Cannot delete screen from the Layers panel. Use the Screens panel.");
+              setActiveMenu(null);
+              return;
+          }
           const isMultiDelete = selectedElementIds.length > 1 && selectedElementIds.includes(activeMenu.id);
           const name = isMultiDelete ? `${selectedElementIds.length} Layers` : activeScreen?.elements.find(e=>e.id===activeMenu.id)?.name || 'Layer';
           setDeleteModal({isOpen:true, id:activeMenu.id, type:activeMenu.type, name}); 
@@ -339,7 +391,7 @@ export const LayersMenu: React.FC<LayersMenuProps> = ({
   };
 
   const handleDuplicate = () => {
-        if (!activeMenu) return;
+        if (!activeMenu || activeMenu.type === 'canvas') return;
         const { id } = activeMenu;
         const el = activeScreen?.elements.find(e => e.id === id);
         if(!el) return;
@@ -450,6 +502,8 @@ export const LayersMenu: React.FC<LayersMenuProps> = ({
   const rootGroups = sortedRoot.filter(el => isFolderType(el));
   const rootLayers = sortedRoot.filter(el => !isFolderType(el));
 
+  const isCanvasSelected = selectedScreenIds.includes(project.activeScreenId) && selectedElementIds.length === 0;
+
   return (
     <div className="flex flex-col h-full bg-white dark:bg-gray-800">
          <div className="p-4 border-b border-gray-200 dark:border-gray-700 flex items-center justify-between shrink-0">
@@ -466,8 +520,27 @@ export const LayersMenu: React.FC<LayersMenuProps> = ({
         </div>
 
         <div className="flex-1 flex flex-col min-h-0">
+            {/* Special Screen Canvas Layer */}
+            <div className="px-2 py-2 border-b border-gray-100 dark:border-gray-700/50 shrink-0">
+                 <div 
+                    onClick={handleCanvasLayerClick}
+                    className={`flex items-center px-2 py-2 rounded-lg cursor-pointer transition-all border-2 ${isCanvasSelected ? 'bg-indigo-50 dark:bg-indigo-900/30 border-indigo-500 text-indigo-700 dark:text-indigo-300' : 'bg-gray-50 dark:bg-gray-850 border-transparent hover:bg-gray-100 dark:hover:bg-gray-750 text-gray-600 dark:text-gray-300'}`}
+                 >
+                    <Monitor size={16} className={`mr-3 ${isCanvasSelected ? 'text-indigo-600 dark:text-indigo-400' : 'text-gray-400'}`} />
+                    <div className="flex-1 min-w-0">
+                        <div className={`text-[11px] font-black uppercase tracking-widest truncate ${activeScreen?.hidden ? 'line-through opacity-50' : ''}`}>
+                            {activeScreen?.name || 'Screen Canvas'}
+                        </div>
+                        <div className="text-[9px] opacity-50 font-bold">BASE LAYER</div>
+                    </div>
+                    <button onClick={(e) => handleMenuTrigger(e, project.activeScreenId, 'canvas')} className="p-1 text-gray-400 hover:text-indigo-600 transition-colors">
+                        <MoreVertical size={14} />
+                    </button>
+                 </div>
+            </div>
+
             {/* Groups Section */}
-            <div className="overflow-y-auto custom-scrollbar p-2 space-y-1 flex-shrink-0 max-h-[60%]">
+            <div className="overflow-y-auto custom-scrollbar p-2 space-y-1 flex-shrink-0 max-h-[50%]">
                 {rootGroups.map(g => renderLayerRow(g, 0))}
             </div>
             
@@ -484,14 +557,14 @@ export const LayersMenu: React.FC<LayersMenuProps> = ({
                     onDrop={(e) => handleDropLayer(e, undefined)}
                 >
                     <div className={`text-[10px] font-bold uppercase mb-2 flex items-center gap-2 select-none flex-shrink-0 ${isDragOverUnsorted ? 'text-indigo-600 dark:text-indigo-400' : 'text-gray-400'}`}>
-                        <FolderOutput size={12} /> Unsorted Layers
+                        <FolderOutput size={12} /> Elements
                     </div>
                     
                     <div className="flex-1 overflow-y-auto custom-scrollbar pr-1 space-y-0.5">
                         {rootLayers.map(layer => renderLayerRow(layer, 0))}
                         {rootLayers.length === 0 && (
                             <div className="h-full flex items-center justify-center text-[10px] text-gray-400 italic pointer-events-none">
-                                Drop layers here to ungroup
+                                Drop elements here
                             </div>
                         )}
                     </div>
@@ -513,7 +586,7 @@ export const LayersMenu: React.FC<LayersMenuProps> = ({
                     </>
                 )}
                 
-                {selectedElementIds.length <= 1 && (
+                {selectedElementIds.length <= 1 && activeMenu.type !== 'canvas' && (
                     <>
                         {activeScreen?.elements.find(e => e.id === activeMenu.id)?.parentId && (
                             <button onClick={handleMoveToRoot} className="w-full text-left px-4 py-2 text-sm text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700 flex items-center gap-2"><FolderOutput size={14} /> Move to Unsorted</button>
@@ -521,14 +594,15 @@ export const LayersMenu: React.FC<LayersMenuProps> = ({
                         <button onClick={handleExportLayer} className="w-full text-left px-4 py-2 text-sm text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700 flex items-center gap-2"><ImageIcon size={14} /> Export Image</button>
                         <button onClick={triggerRename} className="w-full text-left px-4 py-2 text-sm text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700 flex items-center gap-2"><Edit2 size={14} /> Rename</button>
                         <button onClick={handleDuplicate} className="w-full text-left px-4 py-2 text-sm text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700 flex items-center gap-2"><Copy size={14} /> Duplicate</button>
-                        {activeMenu.type === 'layerGroup' && (
-                            <button onClick={() => { setDeleteModal({isOpen:true, id:activeMenu.id, type:'layerGroup', name:'Group'}); executeUngroup(); }} className="w-full text-left px-4 py-2 text-sm text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 flex items-center gap-2"><Ungroup size={14} /> Ungroup Only</button>
-                        )}
                     </>
+                )}
+
+                {activeMenu.type === 'canvas' && (
+                     <button onClick={handleExportLayer} className="w-full text-left px-4 py-2 text-sm text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700 flex items-center gap-2"><ImageIcon size={14} /> Export Screen</button>
                 )}
                 
                 <div className="my-1 border-t border-gray-100 dark:border-gray-700" />
-                <button onClick={triggerDelete} className="w-full text-left px-4 py-2 text-sm text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 flex items-center gap-2"><Trash2 size={14} /> Delete</button>
+                {activeMenu.type !== 'canvas' && <button onClick={triggerDelete} className="w-full text-left px-4 py-2 text-sm text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 flex items-center gap-2"><Trash2 size={14} /> Delete</button>}
             </div>
         )}
         {renameModal && <RenameModal isOpen={renameModal.isOpen} title={`Rename ${renameModal.type}`} initialValue={renameModal.currentName} onClose={() => setRenameModal(null)} onSave={executeRename} />}

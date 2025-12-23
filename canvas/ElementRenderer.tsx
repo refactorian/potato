@@ -1,4 +1,5 @@
 
+
 import React from 'react';
 import * as LucideIcons from 'lucide-react';
 import { CanvasElement, IconStyle } from '../types';
@@ -26,7 +27,7 @@ export const ElementRenderer: React.FC<ElementRendererProps> = ({ element, isPre
     fontSize: style.fontSize,
     fontWeight: style.fontWeight,
     fontStyle: style.fontStyle,
-    textTransform: style.textTransform,
+    textTransform: style.textTransform as any,
     letterSpacing: style.letterSpacing ? `${style.letterSpacing}px` : undefined,
     borderRadius: style.borderRadius !== undefined ? `${style.borderRadius}px` : undefined,
     borderTopLeftRadius: style.borderTopLeftRadius !== undefined ? `${style.borderTopLeftRadius}px` : undefined,
@@ -72,13 +73,9 @@ export const ElementRenderer: React.FC<ElementRendererProps> = ({ element, isPre
   };
 
   const DynamicIcon = props.iconName ? getIcon(props.iconName) : null;
-  const LeftIcon = props.leftIcon ? getIcon(props.leftIcon) : null;
-  const RightIcon = props.rightIcon ? getIcon(props.rightIcon) : null;
   const BtnIcon = props.icon ? getIcon(props.icon) : null;
 
   const iconStyle = props.iconStyle as IconStyle | undefined;
-  const leftIconStyle = props.leftIconStyle as IconStyle | undefined;
-  const rightIconStyle = props.rightIconStyle as IconStyle | undefined;
 
   switch (type) {
     case 'button':
@@ -100,6 +97,51 @@ export const ElementRenderer: React.FC<ElementRendererProps> = ({ element, isPre
       return (
         <div style={{ ...commonStyle, alignItems: 'flex-start', justifyContent: 'flex-start', overflow: 'visible', whiteSpace: 'pre-wrap' }}>
           {props.text}
+        </div>
+      );
+    /* Added case for navbar to render title and icons */
+    case 'navbar':
+      const NavLeftIcon = props.leftIcon ? getIcon(props.leftIcon) : null;
+      const NavRightIcon = props.rightIcon ? getIcon(props.rightIcon) : null;
+      return (
+        <div style={{ 
+          ...commonStyle, 
+          flexDirection: 'row', 
+          justifyContent: 'space-between', 
+          alignItems: 'center', 
+          padding: style.padding || '0 16px'
+        }}>
+          <div style={{ width: 24, display: 'flex', justifyContent: 'center' }}>
+            {NavLeftIcon && React.createElement(NavLeftIcon, { size: 20 })}
+          </div>
+          <div style={{ 
+            flex: 1, 
+            textAlign: style.textAlign || 'center', 
+            fontWeight: style.fontWeight || 'bold',
+            fontSize: style.fontSize || 18
+          }}>
+            {props.title}
+          </div>
+          <div style={{ width: 24, display: 'flex', justifyContent: 'center' }}>
+            {NavRightIcon && React.createElement(NavRightIcon, { size: 20 })}
+          </div>
+        </div>
+      );
+    /* Added case for card to render title and subtitle */
+    case 'card':
+      return (
+        <div style={{ 
+          ...commonStyle, 
+          padding: style.padding || 16, 
+          justifyContent: 'flex-start',
+          alignItems: 'flex-start'
+        }}>
+          <div style={{ fontWeight: 'bold', fontSize: (style.fontSize || 14) + 2, marginBottom: 4 }}>
+            {props.title}
+          </div>
+          <div style={{ fontSize: style.fontSize || 12, opacity: 0.7 }}>
+            {props.subtitle}
+          </div>
         </div>
       );
     case 'input':
@@ -205,24 +247,6 @@ export const ElementRenderer: React.FC<ElementRendererProps> = ({ element, isPre
                 />
             ) : <LucideIcons.HelpCircle size={iconSize} color={standaloneIconProps.color} />}
          </div>
-      );
-    case 'navbar':
-      const lProps = getIconProps(leftIconStyle);
-      const rProps = getIconProps(rightIconStyle);
-
-      return (
-        <div style={{ ...commonStyle, flexDirection: 'row', alignItems: 'center', padding: '0 16px', justifyContent: 'space-between' }}>
-          {LeftIcon ? <LeftIcon size={lProps.size} color={lProps.color} strokeWidth={lProps.strokeWidth} absoluteStrokeWidth={lProps.absoluteStrokeWidth} /> : <div className="w-6" />}
-          <div className="font-bold">{props.title}</div>
-          {RightIcon ? <RightIcon size={rProps.size} color={rProps.color} strokeWidth={rProps.strokeWidth} absoluteStrokeWidth={rProps.absoluteStrokeWidth} /> : <div className="w-6" />}
-        </div>
-      );
-    case 'card':
-      return (
-        <div style={{ ...commonStyle, justifyContent: 'flex-start', alignItems: 'flex-start', padding: style.padding ?? 16 }}>
-          <h3 className="font-bold text-lg mb-2" style={{ color: style.color }}>{props.title}</h3>
-          <p className="text-sm opacity-75" style={{ color: style.color }}>{props.subtitle}</p>
-        </div>
       );
     case 'circle':
         return (

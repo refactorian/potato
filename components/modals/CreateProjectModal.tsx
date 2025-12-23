@@ -64,7 +64,6 @@ export const CreateProjectModal: React.FC<CreateProjectModalProps> = ({ isOpen, 
             const indexStr = localStorage.getItem('potato_projects_index');
             if (indexStr) {
                 const list = JSON.parse(indexStr);
-                // Enrich list with viewport data for display
                 const enrichedList = list.map((meta: any) => {
                     try {
                         const fullData = localStorage.getItem(`potato_project_${meta.id}`);
@@ -77,7 +76,7 @@ export const CreateProjectModal: React.FC<CreateProjectModalProps> = ({ isOpen, 
                 });
 
                 const sortedList = enrichedList.sort((a: any, b: any) => b.lastModified - a.lastModified);
-                setExistingProjects(sortedList);
+                setExistingProjects(enrichedList);
             }
         } catch (e) {
             console.error("Failed to load projects", e);
@@ -89,7 +88,6 @@ export const CreateProjectModal: React.FC<CreateProjectModalProps> = ({ isOpen, 
 
   const handleCreate = () => {
       if (activeTab === 'blank') {
-          // Fix: Added missing mandatory Screen properties to the initial screen
           const newProject: Project = {
               id: uuidv4(),
               name: projectName,
@@ -125,8 +123,8 @@ export const CreateProjectModal: React.FC<CreateProjectModalProps> = ({ isOpen, 
           onClose();
       } else if (activeTab === 'template' && selectedTemplate) {
           const newProject: Project = {
-              viewportWidth: 375, // Default if missing in template
-              viewportHeight: 812, // Default if missing in template
+              viewportWidth: 375,
+              viewportHeight: 812,
               assets: [],
               screenGroups: [],
               gridConfig: { 
@@ -158,8 +156,6 @@ export const CreateProjectModal: React.FC<CreateProjectModalProps> = ({ isOpen, 
               onClose();
           }
       } else if (activeTab === 'import' && importedProjects.length > 0) {
-          // Process all valid imported projects
-          // Assign new IDs to ensure no collision if re-importing the same file
           const processedProjects = importedProjects.map(p => ({
               ...p,
               id: uuidv4(),
@@ -171,50 +167,53 @@ export const CreateProjectModal: React.FC<CreateProjectModalProps> = ({ isOpen, 
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4 animate-in fade-in duration-200">
-      <div className="bg-white dark:bg-gray-800 rounded-xl shadow-2xl w-full max-w-5xl h-[700px] flex flex-col overflow-hidden border border-gray-200 dark:border-gray-700">
-        
+    <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/70 backdrop-blur-[6px] p-4 md:p-6 animate-in fade-in duration-300">
+      <div 
+        className="bg-white dark:bg-gray-850 rounded-[40px] shadow-2xl w-full max-w-5xl overflow-hidden border border-gray-200 dark:border-gray-700 flex flex-col animate-in zoom-in-95 duration-200"
+        style={{ maxHeight: 'calc(100vh - 140px)' }}
+      >
         {/* Header */}
-        <div className="flex items-center justify-between p-5 border-b border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800">
-          <h2 className="text-xl font-bold text-gray-800 dark:text-white">Create New Project</h2>
-          <button onClick={onClose} className="p-1 rounded-full hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-500 dark:text-gray-400 transition-colors">
-            <X size={24} />
+        <div className="flex items-center justify-between p-6 pb-4 border-b border-gray-100 dark:border-gray-800 bg-white dark:bg-gray-850 shrink-0">
+          <div>
+            <h3 className="text-[10px] font-black text-indigo-500 uppercase tracking-[0.2em] mb-1">Getting Started</h3>
+            <h2 className="text-2xl font-black text-gray-900 dark:text-white leading-none">New Project</h2>
+          </div>
+          <button onClick={onClose} className="p-3 rounded-2xl hover:bg-gray-100 dark:hover:bg-gray-800 text-gray-400 hover:text-red-500 transition-all active:scale-90 border border-gray-100 dark:border-gray-700">
+            <X size={20} />
           </button>
         </div>
 
-        <div className="flex flex-1 overflow-hidden">
+        <div className="flex flex-1 overflow-hidden min-h-0">
             {/* Sidebar Navigation */}
-            <div className="w-64 bg-gray-50 dark:bg-gray-900 border-r border-gray-200 dark:border-gray-700 p-4 space-y-2 shrink-0">
+            <div className="w-20 md:w-64 bg-gray-50 dark:bg-gray-900 border-r border-gray-100 dark:border-gray-800 p-4 md:p-5 space-y-3 shrink-0 overflow-y-auto">
                 <button 
                     onClick={() => setActiveTab('blank')}
-                    className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg transition-all text-sm font-medium ${activeTab === 'blank' ? 'bg-indigo-100 dark:bg-indigo-900/50 text-indigo-700 dark:text-indigo-300' : 'text-gray-600 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-800'}`}
+                    className={`w-full flex items-center gap-4 px-4 py-4 rounded-3xl transition-all shadow-sm ${activeTab === 'blank' ? 'bg-indigo-600 text-white shadow-xl shadow-indigo-600/20' : 'bg-white dark:bg-gray-800 text-gray-500 hover:text-gray-700 dark:hover:text-gray-200 border border-gray-100 dark:border-gray-700'}`}
                 >
-                    <FilePlus size={18} /> Blank Project
+                    <FilePlus size={22} className="shrink-0" /> <span className="hidden md:inline font-black uppercase text-[11px] tracking-widest">Blank Slate</span>
                 </button>
                 <button 
                     onClick={() => setActiveTab('template')}
-                    className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg transition-all text-sm font-medium ${activeTab === 'template' ? 'bg-indigo-100 dark:bg-indigo-900/50 text-indigo-700 dark:text-indigo-300' : 'text-gray-600 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-800'}`}
+                    className={`w-full flex items-center gap-4 px-4 py-4 rounded-3xl transition-all shadow-sm ${activeTab === 'template' ? 'bg-indigo-600 text-white shadow-xl shadow-indigo-600/20' : 'bg-white dark:bg-gray-800 text-gray-500 hover:text-gray-700 dark:hover:text-gray-200 border border-gray-100 dark:border-gray-700'}`}
                 >
-                    <Layout size={18} /> From Template
+                    <Layout size={22} className="shrink-0" /> <span className="hidden md:inline font-black uppercase text-[11px] tracking-widest">Blueprint Gallery</span>
                 </button>
                 <button 
                     onClick={() => setActiveTab('duplicate')}
-                    className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg transition-all text-sm font-medium ${activeTab === 'duplicate' ? 'bg-indigo-100 dark:bg-indigo-900/50 text-indigo-700 dark:text-indigo-300' : 'text-gray-600 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-800'}`}
+                    className={`w-full flex items-center gap-4 px-4 py-4 rounded-3xl transition-all shadow-sm ${activeTab === 'duplicate' ? 'bg-indigo-600 text-white shadow-xl shadow-indigo-600/20' : 'bg-white dark:bg-gray-800 text-gray-500 hover:text-gray-700 dark:hover:text-gray-200 border border-gray-100 dark:border-gray-700'}`}
                 >
-                    <Copy size={18} /> Duplicate Existing
+                    <Copy size={22} className="shrink-0" /> <span className="hidden md:inline font-black uppercase text-[11px] tracking-widest">Clone Existing</span>
                 </button>
                 <button 
                     onClick={() => setActiveTab('import')}
-                    className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg transition-all text-sm font-medium ${activeTab === 'import' ? 'bg-indigo-100 dark:bg-indigo-900/50 text-indigo-700 dark:text-indigo-300' : 'text-gray-600 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-800'}`}
+                    className={`w-full flex items-center gap-4 px-4 py-4 rounded-3xl transition-all shadow-sm ${activeTab === 'import' ? 'bg-indigo-600 text-white shadow-xl shadow-indigo-600/20' : 'bg-white dark:bg-gray-800 text-gray-500 hover:text-gray-700 dark:hover:text-gray-200 border border-gray-100 dark:border-gray-700'}`}
                 >
-                    <Upload size={18} /> Import JSON / ZIP
+                    <Upload size={22} className="shrink-0" /> <span className="hidden md:inline font-black uppercase text-[11px] tracking-widest">Import Package</span>
                 </button>
             </div>
 
             {/* Content Area */}
-            <div className="flex-1 p-8 overflow-y-auto bg-white dark:bg-gray-800 custom-scrollbar">
-                
-                {/* BLANK PROJECT */}
+            <div className="flex-1 p-6 md:p-10 overflow-y-auto bg-white dark:bg-gray-850 custom-scrollbar min-h-0">
                 {activeTab === 'blank' && (
                     <BlankProjectTab 
                         projectName={projectName} setProjectName={setProjectName}
@@ -229,7 +228,6 @@ export const CreateProjectModal: React.FC<CreateProjectModalProps> = ({ isOpen, 
                     />
                 )}
 
-                {/* TEMPLATE */}
                 {activeTab === 'template' && (
                     <TemplateTab 
                         projectName={projectName} 
@@ -239,7 +237,6 @@ export const CreateProjectModal: React.FC<CreateProjectModalProps> = ({ isOpen, 
                     />
                 )}
 
-                {/* DUPLICATE */}
                 {activeTab === 'duplicate' && (
                     <DuplicateTab 
                         projectName={projectName}
@@ -250,23 +247,21 @@ export const CreateProjectModal: React.FC<CreateProjectModalProps> = ({ isOpen, 
                     />
                 )}
 
-                {/* IMPORT */}
                 {activeTab === 'import' && (
                     <ImportTab 
                         setImportedProjects={setImportedProjects}
                     />
                 )}
-
             </div>
         </div>
 
         {/* Footer Actions */}
-        <div className="p-5 border-t border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-900 flex justify-end gap-3">
+        <div className="p-6 border-t border-gray-100 dark:border-gray-800 bg-gray-50 dark:bg-gray-900 flex justify-end gap-4 shrink-0">
             <button 
                 onClick={onClose}
-                className="px-5 py-2.5 rounded-lg text-sm font-medium text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-800 transition-colors"
+                className="px-6 py-3 rounded-2xl text-xs font-black uppercase tracking-widest text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-800 transition-all border border-transparent"
             >
-                Cancel
+                Discard
             </button>
             <button 
                 onClick={handleCreate}
@@ -276,9 +271,9 @@ export const CreateProjectModal: React.FC<CreateProjectModalProps> = ({ isOpen, 
                     (activeTab === 'import' && importedProjects.length === 0) ||
                     (activeTab === 'blank' && !projectName.trim())
                 }
-                className="px-6 py-2.5 rounded-lg text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700 disabled:opacity-50 disabled:cursor-not-allowed shadow-md transition-all"
+                className="px-10 py-4 rounded-2xl text-xs font-black uppercase tracking-widest text-white bg-indigo-600 hover:bg-indigo-700 disabled:opacity-30 disabled:cursor-not-allowed shadow-2xl shadow-indigo-600/30 transition-all border-2 border-indigo-500 active:scale-95"
             >
-                {activeTab === 'import' && importedProjects.length > 1 ? `Create ${importedProjects.length} Projects` : 'Create Project'}
+                {activeTab === 'import' && importedProjects.length > 1 ? `Import ${importedProjects.length} Items` : 'Launch Project'}
             </button>
         </div>
       </div>

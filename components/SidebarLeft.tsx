@@ -168,6 +168,7 @@ export const SidebarLeft: React.FC<SidebarLeftProps> = ({
                         setProject={setProject} 
                         selectedElementIds={selectedElementIds}
                         setSelectedElementIds={setSelectedElementIds} 
+                        selectedScreenIds={selectedScreenIds}
                         setSelectedScreenIds={setSelectedScreenIds}
                         setSelectedScreenGroupIds={setSelectedScreenGroupIds}
                         appSettings={appSettings}

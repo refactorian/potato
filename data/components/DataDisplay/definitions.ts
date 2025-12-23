@@ -3,13 +3,18 @@ import { LibraryItem } from '../../../types';
 
 export const DATA_DISPLAY_COMPONENTS: LibraryItem[] = [
     {
-        type: 'card',
-        label: 'Simple Stat Card',
+        type: 'group',
+        label: 'Stat Card',
         icon: 'TrendingUp',
         defaultWidth: 160,
         defaultHeight: 100,
-        defaultProps: { title: 'Active Users', subtitle: '12,450' },
-        defaultStyle: { backgroundColor: '#ffffff', borderRadius: 12, shadow: true, padding: 16 },
+        defaultProps: {},
+        defaultStyle: { backgroundColor: 'transparent' },
+        children: [
+            { type: 'container', name: 'BG', x: 0, y: 0, width: 160, height: 100, props: {}, style: { backgroundColor: '#ffffff', borderRadius: 12, shadow: true } },
+            { type: 'text', name: 'Title', x: 16, y: 16, width: 128, height: 20, props: { text: 'Active Users' }, style: { fontSize: 12, color: '#64748b', fontWeight: 'bold' } },
+            { type: 'text', name: 'Value', x: 16, y: 44, width: 128, height: 32, props: { text: '12,450' }, style: { fontSize: 24, color: '#0f172a', fontWeight: '900' } }
+        ]
     },
     {
         type: 'group',

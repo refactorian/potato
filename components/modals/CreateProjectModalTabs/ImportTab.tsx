@@ -4,10 +4,6 @@ import { Upload, FileJson, Archive, CheckCircle2, AlertCircle, X, Trash2, Edit2 
 import { Project } from '../../../types';
 import JSZip from 'jszip';
 
-interface ImportTabProps {
-  setImportedProjects: (projects: Project[]) => void;
-}
-
 interface ImportCandidate {
   id: string;
   originalName: string; // Filename
@@ -15,6 +11,10 @@ interface ImportCandidate {
   status: 'valid' | 'invalid' | 'loading';
   error?: string;
   editedName: string;
+}
+
+interface ImportTabProps {
+  setImportedProjects: (projects: Project[]) => void;
 }
 
 export const ImportTab: React.FC<ImportTabProps> = ({ setImportedProjects }) => {
@@ -150,7 +150,8 @@ export const ImportTab: React.FC<ImportTabProps> = ({ setImportedProjects }) => 
     setIsProcessing(true);
     let newCandidates: ImportCandidate[] = [];
 
-    for (const file of Array.from(files)) {
+    // Cast Array.from(files) to File[] to satisfy the processFile parameter type
+    for (const file of Array.from(files) as File[]) {
         const candidatesFromFile = await processFile(file);
         newCandidates = [...newCandidates, ...candidatesFromFile];
     }

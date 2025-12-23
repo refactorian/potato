@@ -1,3 +1,4 @@
+
 import { Project } from '../../../types';
 
 export const BLANK_STARTER_DATA: Partial<Project> = {
@@ -28,7 +29,9 @@ export const BLANK_STARTER_DATA: Partial<Project> = {
       "viewportHeight": 812,
       "gridConfig": { "visible": false, "size": 20, "color": "rgba(255,255,255,0.1)", "snapToGrid": true },
       "elements": [
-        { "id": "nav-1", "type": "navbar", "name": "App Bar", "x": 0, "y": 0, "width": 375, "height": 64, "zIndex": 10, "props": { "title": "Overview", "rightIcon": "Bell" }, "style": { "backgroundColor": "#1e293b", "shadow": true, "color": "#f8fafc", "fontWeight": "bold" }, "interactions": [] },
+        { "id": "nav-group", "type": "group", "name": "App Bar", "x": 0, "y": 0, "width": 375, "height": 64, "zIndex": 10, "props": {}, "style": { "backgroundColor": "transparent" }, "interactions": [] },
+        { "id": "nav-bg", "parentId": "nav-group", "type": "container", "name": "BG", "x": 0, "y": 0, "width": 375, "height": 64, "zIndex": 1, "props": {}, "style": { "backgroundColor": "#1e293b", "shadow": true }, "interactions": [] },
+        { "id": "nav-title", "parentId": "nav-group", "type": "text", "name": "Title", "x": 0, "y": 0, "width": 375, "height": 64, "zIndex": 2, "props": { "text": "Overview" }, "style": { "fontSize": 18, "textAlign": "center", "fontWeight": "bold", "color": "#f8fafc" }, "interactions": [] },
         { "id": "hero-bg", "type": "container", "name": "Hero Card", "x": 16, "y": 80, "width": 343, "height": 180, "zIndex": 1, "props": {}, "style": { "backgroundColor": "#4f46e5", "borderRadius": 24, "shadow": true }, "interactions": [] },
         { "id": "hero-text", "type": "text", "name": "Welcome", "x": 36, "y": 105, "width": 200, "height": 30, "zIndex": 2, "props": { "text": "Welcome Alex" }, "style": { "fontSize": 26, "fontWeight": "900", "color": "#ffffff" }, "interactions": [] },
         { "id": "hero-sub", "type": "text", "name": "Status", "x": 36, "y": 140, "width": 260, "height": 40, "zIndex": 2, "props": { "text": "Your system is optimized and secure." }, "style": { "fontSize": 14, "color": "#c7d2fe" }, "interactions": [] },
@@ -47,40 +50,14 @@ export const BLANK_STARTER_DATA: Partial<Project> = {
       "viewportHeight": 812,
       "gridConfig": { "visible": false, "size": 20, "color": "rgba(255,255,255,0.1)", "snapToGrid": true },
       "elements": [
-        { "id": "nav-2", "type": "navbar", "name": "App Bar", "x": 0, "y": 0, "width": 375, "height": 64, "zIndex": 10, "props": { "title": "Discover", "leftIcon": "ArrowLeft" }, "style": { "backgroundColor": "#1e293b", "shadow": true, "color": "#f8fafc" }, "interactions": [{ "id": "int-back", "trigger": "onClick", "action": "back" }] },
+        { "id": "nav-group-2", "type": "group", "name": "App Bar", "x": 0, "y": 0, "width": 375, "height": 64, "zIndex": 10, "props": {}, "style": { "backgroundColor": "transparent" }, "interactions": [] },
+        { "id": "nav-bg-2", "parentId": "nav-group-2", "type": "container", "name": "BG", "x": 0, "y": 0, "width": 375, "height": 64, "zIndex": 1, "props": {}, "style": { "backgroundColor": "#1e293b", "shadow": true }, "interactions": [] },
+        { "id": "nav-back", "parentId": "nav-group-2", "type": "icon", "name": "Back", "x": 16, "y": 20, "width": 24, "height": 24, "zIndex": 3, "props": { "iconName": "ArrowLeft" }, "style": { "color": "#ffffff" }, "interactions": [{ "id": "int-back", "trigger": "onClick", "action": "back" }] },
+        { "id": "nav-title-2", "parentId": "nav-group-2", "type": "text", "name": "Title", "x": 0, "y": 0, "width": 375, "height": 64, "zIndex": 2, "props": { "text": "Discover" }, "style": { "fontSize": 18, "textAlign": "center", "fontWeight": "bold", "color": "#f8fafc" }, "interactions": [] },
         { "id": "search-box", "type": "input", "name": "Search", "x": 16, "y": 80, "width": 343, "height": 52, "zIndex": 1, "props": { "placeholder": "Search components..." }, "style": { "borderRadius": 16, "backgroundColor": "#1e293b", "borderWidth": 1, "borderColor": "#334155", "padding": "0 20px", "color": "#f8fafc" }, "interactions": [] },
-        { "id": "feat-1", "type": "card", "name": "Feature 1", "x": 16, "y": 148, "width": 164, "height": 220, "zIndex": 1, "props": { "title": "Components", "subtitle": "v1.0" }, "style": { "backgroundColor": "#1e1b4b", "borderRadius": 24, "padding": 20, "color": "#c7d2fe", "borderWidth": 1, "borderColor": "#312e81" }, "interactions": [] },
-        { "id": "feat-2", "type": "card", "name": "Feature 2", "x": 195, "y": 148, "width": 164, "height": 220, "zIndex": 1, "props": { "title": "Templates", "subtitle": "v2.0" }, "style": { "backgroundColor": "#450a0a", "borderRadius": 24, "padding": 20, "color": "#fecaca", "borderWidth": 1, "borderColor": "#7f1d1d" }, "interactions": [] }
-      ]
-    },
-    {
-      "id": "sc-profile",
-      "name": "Profile",
-      "groupId": "grp-core",
-      "backgroundColor": "#0f172a",
-      "viewportWidth": 375,
-      "viewportHeight": 812,
-      "gridConfig": { "visible": false, "size": 20, "color": "rgba(255,255,255,0.1)", "snapToGrid": true },
-      "elements": [
-        { "id": "p-bg", "type": "container", "name": "Header BG", "x": 0, "y": 0, "width": 375, "height": 220, "zIndex": 1, "props": {}, "style": { "backgroundColor": "#1e293b", "borderBottomWidth": 1, "borderColor": "#334155" }, "interactions": [] },
-        { "id": "avatar", "type": "circle", "name": "Avatar", "x": 127, "y": 80, "width": 120, "height": 120, "zIndex": 2, "props": {}, "style": { "backgroundColor": "#6366f1", "borderWidth": 4, "borderColor": "#0f172a", "shadow": true }, "interactions": [] },
-        { "id": "p-name", "type": "text", "name": "User Name", "x": 0, "y": 215, "width": 375, "height": 30, "zIndex": 2, "props": { "text": "Potato Dev" }, "style": { "fontSize": 24, "fontWeight": "bold", "textAlign": "center", "color": "#f8fafc" }, "interactions": [] },
-        { "id": "set-btn", "type": "button", "name": "Settings Nav", "x": 37, "y": 300, "width": 300, "height": 56, "zIndex": 2, "props": { "text": "Preferences", "icon": "Settings" }, "style": { "backgroundColor": "#1e293b", "color": "#f8fafc", "borderRadius": 16, "fontWeight": "bold", "borderWidth": 1, "borderColor": "#334155" }, "interactions": [{ "id": "int-set", "trigger": "onClick", "action": "navigate", "payload": "sc-settings" }] }
-      ]
-    },
-    {
-      "id": "sc-settings",
-      "name": "Settings",
-      "groupId": "grp-core",
-      "backgroundColor": "#0f172a",
-      "viewportWidth": 375,
-      "viewportHeight": 812,
-      "gridConfig": { "visible": false, "size": 20, "color": "rgba(255,255,255,0.1)", "snapToGrid": true },
-      "elements": [
-        { "id": "nav-s", "type": "navbar", "name": "App Bar", "x": 0, "y": 0, "width": 375, "height": 64, "zIndex": 10, "props": { "title": "Settings", "leftIcon": "ArrowLeft" }, "style": { "backgroundColor": "#1e293b", "shadow": true, "color": "#f8fafc" }, "interactions": [{ "id": "int-back-s", "trigger": "onClick", "action": "back" }] },
-        { "id": "opt-1-bg", "type": "container", "name": "Option 1", "x": 16, "y": 80, "width": 343, "height": 64, "zIndex": 1, "props": {}, "style": { "backgroundColor": "#1e293b", "borderRadius": 16, "borderWidth": 1, "borderColor": "#334155" }, "interactions": [] },
-        { "id": "opt-1-text", "type": "text", "name": "Dark Mode", "x": 40, "y": 102, "width": 200, "height": 20, "zIndex": 2, "props": { "text": "OLED Dark Mode" }, "style": { "fontSize": 16, "fontWeight": "bold", "color": "#f8fafc" }, "interactions": [] },
-        { "id": "opt-1-toggle", "type": "toggle", "name": "Toggle", "x": 290, "y": 97, "width": 50, "height": 30, "zIndex": 2, "props": { "checked": true }, "style": { "backgroundColor": "#6366f1" }, "interactions": [] }
+        { "id": "feat-group-1", "type": "group", "name": "Feature 1", "x": 16, "y": 148, "width": 164, "height": 220, "zIndex": 1, "props": {}, "style": { "backgroundColor": "transparent" }, "interactions": [] },
+        { "id": "feat-bg-1", "parentId": "feat-group-1", "type": "container", "name": "BG", "x": 0, "y": 0, "width": 164, "height": 220, "zIndex": 1, "props": {}, "style": { "backgroundColor": "#1e1b4b", "borderRadius": 24, "borderWidth": 1, "borderColor": "#312e81" }, "interactions": [] },
+        { "id": "feat-t-1", "parentId": "feat-group-1", "type": "text", "name": "Title", "x": 20, "y": 20, "width": 124, "height": 24, "zIndex": 2, "props": { "text": "Components" }, "style": { "fontSize": 14, "fontWeight": "bold", "color": "#c7d2fe" }, "interactions": [] }
       ]
     }
   ]

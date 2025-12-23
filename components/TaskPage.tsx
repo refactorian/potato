@@ -458,7 +458,22 @@ export const TaskPage: React.FC = () => {
 
 // --- Recursive Item Component ---
 
-const TaskItemComponent = ({ 
+// Define interface for TaskItemComponent props to properly handle React attributes like 'key'
+interface TaskItemComponentProps {
+    item: TaskItem;
+    level: number;
+    onUpdate: (id: string, data: Partial<TaskItem>) => void;
+    onDelete: (id: string) => void;
+    onAddSub: (id: string) => void;
+    onToggle: (id: string, status: boolean) => void;
+    onDragStart: (e: React.DragEvent, item: TaskItem) => void;
+    onDragOver: (e: React.DragEvent, id: string) => void;
+    onDrop: (e: React.DragEvent, id: string) => void;
+    dragOverItem: { id: string; position: 'top' | 'middle' | 'bottom' } | null;
+}
+
+// Convert to React.FC to correctly support JSX features and key prop
+const TaskItemComponent: React.FC<TaskItemComponentProps> = ({ 
     item, 
     level, 
     onUpdate, 
@@ -469,17 +484,6 @@ const TaskItemComponent = ({
     onDragOver,
     onDrop,
     dragOverItem
-}: { 
-    item: TaskItem, 
-    level: number,
-    onUpdate: (id: string, data: Partial<TaskItem>) => void,
-    onDelete: (id: string) => void,
-    onAddSub: (id: string) => void,
-    onToggle: (id: string, status: boolean) => void,
-    onDragStart: (e: React.DragEvent, item: TaskItem) => void,
-    onDragOver: (e: React.DragEvent, id: string) => void,
-    onDrop: (e: React.DragEvent, id: string) => void,
-    dragOverItem: { id: string; position: 'top' | 'middle' | 'bottom' } | null
 }) => {
     const [isColorPickerOpen, setIsColorPickerOpen] = useState(false);
     

@@ -258,7 +258,8 @@ const App: React.FC = () => {
                 setActiveRightTab('properties');
               }}
               onCanvasDoubleClick={() => {
-                setActiveLeftTab('screens');
+                // Modified: Now switches to 'layers' tab to show the base layer selection
+                setActiveLeftTab('layers');
                 setActiveRightTab('properties');
                 setSelectedScreenIds([project.activeScreenId]);
                 setSelectedElementIds([]);

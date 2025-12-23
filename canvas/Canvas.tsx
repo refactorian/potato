@@ -1,5 +1,5 @@
 
-import React, { useRef, useState } from 'react';
+import React, { useRef, useState, useMemo } from 'react';
 import { CanvasElement, Project, AppSettings, LeftSidebarTab } from '../types';
 import { ElementRenderer } from './ElementRenderer';
 import { executeInteraction } from '../interactions/engine';
@@ -58,6 +58,32 @@ export const Canvas: React.FC<CanvasProps> = ({
   const { handleDrop, handleDragOver } = useCanvasDrop(
       project, setProject, scale, canvasRef, isPreview, setSelectedElementIds, setSelectedScreenIds, setSelectedScreenGroupIds
   );
+
+  // --- Selection Bounding Box Calculation ---
+  const selectionBounds = useMemo(() => {
+    if (!activeScreen || selectedElementIds.length === 0) return null;
+    
+    const selectedElements = activeScreen.elements.filter(el => selectedElementIds.includes(el.id));
+    if (selectedElements.length === 0) return null;
+
+    let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
+
+    selectedElements.forEach(el => {
+        minX = Math.min(minX, el.x);
+        minY = Math.min(minY, el.y);
+        maxX = Math.max(maxX, el.x + el.width);
+        maxY = Math.max(maxY, el.y + el.height);
+    });
+
+    return {
+        x: minX,
+        y: minY,
+        width: maxX - minX,
+        height: maxY - minY,
+        // Used to determine if the whole selection is locked
+        isAnyLocked: selectedElements.some(el => el.locked)
+    };
+  }, [selectedElementIds, activeScreen]);
 
   if (!activeScreen) return <div className="p-10 text-gray-400">No Screen Selected</div>;
 
@@ -121,11 +147,11 @@ export const Canvas: React.FC<CanvasProps> = ({
       }
   };
 
-  // Quick Action Handlers
-  const handleDuplicate = (id: string) => {
-    const el = activeScreen.elements.find(e => e.id === id);
-    if (!el) return;
+  // --- Bulk Action Handlers ---
 
+  const handleBulkDuplicate = () => {
+    if (selectedElementIds.length === 0) return;
+    
     const getDescendants = (parentId: string, allElements: CanvasElement[]): CanvasElement[] => {
       const children = allElements.filter(e => e.parentId === parentId);
       let descendants = [...children];
@@ -135,37 +161,53 @@ export const Canvas: React.FC<CanvasProps> = ({
       return descendants;
     };
 
-    const descendants = getDescendants(id, activeScreen.elements);
-    const idMap: Record<string, string> = { [id]: uuidv4() };
-    descendants.forEach(d => idMap[d.id] = uuidv4());
+    const idMap: Record<string, string> = {};
+    const elementsToDuplicate = activeScreen.elements.filter(el => selectedElementIds.includes(el.id));
+    
+    // 1. Map all root IDs and their descendants to new unique IDs
+    elementsToDuplicate.forEach(el => {
+        idMap[el.id] = uuidv4();
+        const descendants = getDescendants(el.id, activeScreen.elements);
+        descendants.forEach(d => idMap[d.id] = uuidv4());
+    });
 
     const offset = 10;
-    const newRoot = {
-      ...JSON.parse(JSON.stringify(el)),
-      id: idMap[id],
-      name: `${el.name} Copy`,
-      x: el.x + offset,
-      y: el.y + offset,
-      zIndex: activeScreen.elements.length + 1
-    };
+    const newElements: CanvasElement[] = [];
 
-    const newDescendants = descendants.map(d => ({
-      ...JSON.parse(JSON.stringify(d)),
-      id: idMap[d.id],
-      parentId: idMap[d.parentId || ''],
-      zIndex: activeScreen.elements.length + 1 + descendants.indexOf(d) + 1
-    }));
+    elementsToDuplicate.forEach(el => {
+        const descendants = getDescendants(el.id, activeScreen.elements);
+        
+        // Add cloned root
+        newElements.push({
+            ...JSON.parse(JSON.stringify(el)),
+            id: idMap[el.id],
+            name: `${el.name} Copy`,
+            x: el.x + offset,
+            y: el.y + offset,
+            zIndex: activeScreen.elements.length + newElements.length + 1
+        });
+
+        // Add cloned descendants
+        descendants.forEach(d => {
+            newElements.push({
+                ...JSON.parse(JSON.stringify(d)),
+                id: idMap[d.id],
+                parentId: idMap[d.parentId || ''],
+                zIndex: activeScreen.elements.length + newElements.length + 1
+            });
+        });
+    });
 
     const updatedScreens = project.screens.map(s => {
       if (s.id !== project.activeScreenId) return s;
-      return { ...s, elements: [...s.elements, newRoot, ...newDescendants] };
+      return { ...s, elements: [...s.elements, ...newElements] };
     });
 
     setProject({ ...project, screens: updatedScreens });
-    setSelectedElementIds([newRoot.id]);
+    setSelectedElementIds(elementsToDuplicate.map(el => idMap[el.id]));
   };
 
-  const handleDelete = (ids: string[]) => {
+  const handleBulkDelete = () => {
     const updatedScreens = project.screens.map(s => {
       if (s.id !== project.activeScreenId) return s;
       const getDescendantIds = (parentId: string, allElements: CanvasElement[]): string[] => {
@@ -175,7 +217,7 @@ export const Canvas: React.FC<CanvasProps> = ({
         return ids;
       };
       let allIdsToDelete: string[] = [];
-      ids.forEach(baseId => {
+      selectedElementIds.forEach(baseId => {
         allIdsToDelete.push(baseId);
         allIdsToDelete.push(...getDescendantIds(baseId, s.elements));
       });
@@ -185,23 +227,30 @@ export const Canvas: React.FC<CanvasProps> = ({
     setSelectedElementIds([]);
   };
 
-  const handleToggleLock = (id: string) => {
+  const handleBulkToggleLock = () => {
+    if (!selectionBounds) return;
+    const shouldLock = !selectionBounds.isAnyLocked;
+
     const updatedScreens = project.screens.map(s => {
       if (s.id !== project.activeScreenId) return s;
       return {
         ...s,
-        elements: s.elements.map(el => el.id === id ? { ...el, locked: !el.locked } : el)
+        elements: s.elements.map(el => 
+            selectedElementIds.includes(el.id) ? { ...el, locked: shouldLock } : el
+        )
       };
     });
     setProject({ ...project, screens: updatedScreens });
   };
 
-  const handleToggleHide = (id: string) => {
+  const handleBulkToggleHide = () => {
     const updatedScreens = project.screens.map(s => {
       if (s.id !== project.activeScreenId) return s;
       return {
         ...s,
-        elements: s.elements.map(el => el.id === id ? { ...el, hidden: !el.hidden } : el)
+        elements: s.elements.map(el => 
+            selectedElementIds.includes(el.id) ? { ...el, hidden: !el.hidden } : el
+        )
       };
     });
     setProject({ ...project, screens: updatedScreens });
@@ -283,7 +332,7 @@ export const Canvas: React.FC<CanvasProps> = ({
         );
       })}
 
-      {/* Pass 2: Selection Overlays (Always on top of elements) */}
+      {/* Pass 2: Selection Outlines and Resize Handles (Per Element) */}
       {!isPreview && (activeScreen.elements || []).map((element) => {
           if (!selectedElementIds.includes(element.id)) return null;
           if (!isElementVisible(element, activeScreen.elements)) return null;
@@ -299,58 +348,78 @@ export const Canvas: React.FC<CanvasProps> = ({
                     top: element.y,
                     width: element.width,
                     height: element.height,
-                    zIndex: 9999, // Extremely high Z-index
+                    zIndex: 9998, // Slightly below toolbar
                 }}
             >
                 {/* Selection Border */}
                 <div className={`absolute inset-0 border-2 ${isLocked ? 'border-red-400' : 'border-blue-500'} pointer-events-none shadow-sm`} />
                 
-                {/* Resize Handle (Interactive) */}
+                {/* Resize Handle (Interactive) - Only if not locked and single selection */}
                 {!isLocked && selectedElementIds.length === 1 && (
                     <div
                         className="absolute -bottom-1.5 -right-1.5 w-3.5 h-3.5 bg-white border-2 border-blue-500 cursor-se-resize z-[10001] rounded-full shadow-md pointer-events-auto"
                         onMouseDown={(e) => handleMouseDown(e, element.id, true, 'se')}
                     />
                 )}
-                 
-                 {/* Quick Action Toolbar (Interactive) */}
-                 <div 
-                  className="absolute -top-12 left-0 flex items-center bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl shadow-2xl overflow-hidden p-1 gap-1 z-[10000] pointer-events-auto ring-1 ring-black/5"
-                  onMouseDown={(e) => e.stopPropagation()}
-                 >
-                    <button 
-                      onClick={() => handleDuplicate(element.id)} 
-                      className="p-1.5 hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-600 dark:text-gray-300 rounded-lg transition-colors"
-                      title="Duplicate"
-                    >
-                      <Copy size={14} />
-                    </button>
-                    <button 
-                      onClick={() => handleToggleLock(element.id)} 
-                      className={`p-1.5 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors ${element.locked ? 'text-red-500 bg-red-50 dark:bg-red-900/30' : 'text-gray-600 dark:text-gray-300'}`}
-                      title={element.locked ? "Unlock" : "Lock"}
-                    >
-                      {element.locked ? <Lock size={14} /> : <Unlock size={14} />}
-                    </button>
-                    <button 
-                      onClick={() => handleToggleHide(element.id)} 
-                      className="p-1.5 hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-600 dark:text-gray-300 rounded-lg transition-colors"
-                      title="Hide"
-                    >
-                      <EyeOff size={14} />
-                    </button>
-                    <div className="w-px h-4 bg-gray-200 dark:bg-gray-700 mx-0.5" />
-                    <button 
-                      onClick={() => handleDelete(selectedElementIds)} 
-                      className="p-1.5 hover:bg-red-50 dark:hover:bg-red-900/30 text-red-500 rounded-lg transition-colors"
-                      title="Delete"
-                    >
-                      <Trash2 size={14} />
-                    </button>
-                 </div>
             </div>
           );
       })}
+
+      {/* Pass 3: Unified Quick Action Toolbar (Once per Selection) */}
+      {!isPreview && selectionBounds && (
+          <div 
+            className="absolute pointer-events-none"
+            style={{
+                left: selectionBounds.x,
+                top: selectionBounds.y,
+                width: selectionBounds.width,
+                height: selectionBounds.height,
+                zIndex: 9999, 
+            }}
+          >
+              <div 
+                  className="absolute -top-12 left-0 flex items-center bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl shadow-2xl overflow-hidden p-1 gap-1 z-[10000] pointer-events-auto ring-1 ring-black/5"
+                  onMouseDown={(e) => e.stopPropagation()}
+              >
+                  {/* Badge for Multi-select */}
+                  {selectedElementIds.length > 1 && (
+                      <div className="px-2 py-1 text-[10px] font-black bg-indigo-50 dark:bg-indigo-900/50 text-indigo-600 dark:text-indigo-400 rounded-lg mr-1 border border-indigo-100 dark:border-indigo-800/50">
+                          {selectedElementIds.length} ITEMS
+                      </div>
+                  )}
+
+                  <button 
+                      onClick={handleBulkDuplicate} 
+                      className="p-1.5 hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-600 dark:text-gray-300 rounded-lg transition-colors"
+                      title="Duplicate"
+                  >
+                      <Copy size={14} />
+                  </button>
+                  <button 
+                      onClick={handleBulkToggleLock} 
+                      className={`p-1.5 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors ${selectionBounds.isAnyLocked ? 'text-red-500 bg-red-50 dark:bg-red-900/30' : 'text-gray-600 dark:text-gray-300'}`}
+                      title={selectionBounds.isAnyLocked ? "Unlock All" : "Lock Selection"}
+                  >
+                      {selectionBounds.isAnyLocked ? <Lock size={14} /> : <Unlock size={14} />}
+                  </button>
+                  <button 
+                      onClick={handleBulkToggleHide} 
+                      className="p-1.5 hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-600 dark:text-gray-300 rounded-lg transition-colors"
+                      title="Hide Selection"
+                  >
+                      <EyeOff size={14} />
+                  </button>
+                  <div className="w-px h-4 bg-gray-200 dark:bg-gray-700 mx-0.5" />
+                  <button 
+                      onClick={handleBulkDelete} 
+                      className="p-1.5 hover:bg-red-50 dark:hover:bg-red-900/20 text-red-500 rounded-lg transition-colors"
+                      title="Delete Selection"
+                  >
+                      <Trash2 size={14} />
+                  </button>
+              </div>
+          </div>
+      )}
     </div>
   );
 };

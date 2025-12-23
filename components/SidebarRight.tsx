@@ -174,38 +174,7 @@ export const SidebarRight: React.FC<SidebarRightProps> = ({
       return <LayerProperties project={project} setProject={setProject} selectedElementId={selectedElementIds[0]} />;
     }
 
-    // 3. Bulk Actions for multiple screens
-    if (selectedScreenIds.length > 1) {
-      return (
-        <BulkActions 
-          label="Screens" count={selectedScreenIds.length}
-          onGroup={() => {}} 
-          onDelete={() => { setDeleteType('screens'); setDeleteConfirmOpen(true); }}
-          onExport={() => onExport?.({ type: 'screen', targetIds: selectedScreenIds })}
-          onMove={handleMoveScreensToRoot}
-        />
-      );
-    }
-
-    // 4. Single Screen Properties (Explicitly selected)
-    if (selectedScreenIds.length === 1) {
-      const screen = project.screens.find(s => s.id === selectedScreenIds[0]);
-      if (screen) {
-          return (
-            <ScreenProperties 
-              screen={screen} 
-              onUpdate={(upd) => setProject(p => ({ ...p, screens: p.screens.map(s => s.id === screen.id ? { ...s, ...upd } : s) }))}
-              onExport={() => onExport?.({ type: 'screen', targetId: screen.id })}
-              onDelete={() => { setDeleteType('screens'); setDeleteConfirmOpen(true); }}
-              onMoveToRoot={() => {
-                  setProject(prev => ({ ...prev, screens: prev.screens.map(s => s.id === screen.id ? { ...s, groupId: undefined } : s) }));
-              }}
-            />
-          );
-      }
-    }
-
-    // 5. Screen Group Properties
+    // 3. Screen Group Properties
     if (selectedScreenGroupIds.length === 1) {
       const group = project.screenGroups.find(g => g.id === selectedScreenGroupIds[0]);
       if (group) return (
@@ -225,6 +194,37 @@ export const SidebarRight: React.FC<SidebarRightProps> = ({
           onDelete={() => { setDeleteType('screenGroups'); setDeleteConfirmOpen(true); }}
         />
       );
+    }
+
+    // 4. Bulk Actions for multiple screens
+    if (selectedScreenIds.length > 1) {
+      return (
+        <BulkActions 
+          label="Screens" count={selectedScreenIds.length}
+          onGroup={() => {}} 
+          onDelete={() => { setDeleteType('screens'); setDeleteConfirmOpen(true); }}
+          onExport={() => onExport?.({ type: 'screen', targetIds: selectedScreenIds })}
+          onMove={handleMoveScreensToRoot}
+        />
+      );
+    }
+
+    // 5. Single Screen Properties (Canvas Selection)
+    if (selectedScreenIds.length === 1) {
+      const screen = project.screens.find(s => s.id === selectedScreenIds[0]);
+      if (screen) {
+          return (
+            <ScreenProperties 
+              screen={screen} 
+              onUpdate={(upd) => setProject(p => ({ ...p, screens: p.screens.map(s => s.id === screen.id ? { ...s, ...upd } : s) }))}
+              onExport={() => onExport?.({ type: 'screen', targetId: screen.id })}
+              onDelete={() => { setDeleteType('screens'); setDeleteConfirmOpen(true); }}
+              onMoveToRoot={() => {
+                  setProject(prev => ({ ...prev, screens: prev.screens.map(s => s.id === screen.id ? { ...s, groupId: undefined } : s) }));
+              }}
+            />
+          );
+      }
     }
 
     // 6. Project Properties (Left sidebar context)

@@ -1,5 +1,5 @@
 
-import { RefObject } from 'react';
+import React, { RefObject } from 'react';
 import { Project, LibraryItem, CanvasElement } from '../types';
 import { v4 as uuidv4 } from 'uuid';
 
