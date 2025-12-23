@@ -40,7 +40,7 @@ export const useCanvasDrag = (
     };
 
     const handleMouseDown = (e: React.MouseEvent, elementId: string, isResize: boolean = false, handleType: string = '') => {
-        if (isPreview) return; // Interaction logic handled in Canvas.tsx or separate hook
+        if (isPreview) return;
 
         e.stopPropagation();
 
@@ -103,8 +103,9 @@ export const useCanvasDrag = (
             const deltaX = (e.clientX - dragInfo.startX) / scale;
             const deltaY = (e.clientY - dragInfo.startY) / scale;
             
-            const gridEnabled = project.gridConfig?.snapToGrid;
-            const gridSize = project.gridConfig?.size || 10;
+            const gridConfig = activeScreen.gridConfig || project.gridConfig;
+            const gridEnabled = gridConfig?.snapToGrid;
+            const gridSize = gridConfig?.size || 10;
 
             const updatedScreens = project.screens.map((s) => {
                 if (s.id !== project.activeScreenId) return s;
@@ -116,20 +117,15 @@ export const useCanvasDrag = (
                     if (dragInfo.isResizing) {
                         if (selectedElementIds.length > 1) return el; 
 
-                        let newW = initialState.width;
-                        let newH = initialState.height;
+                        let newW = initialState.width + deltaX;
+                        let newH = initialState.height + deltaY;
                         
-                        if (dragInfo.resizeHandle === 'se') {
-                            newW = Math.max(10, initialState.width + deltaX);
-                            newH = Math.max(10, initialState.height + deltaY);
-                        }
-                        
-                        if(gridEnabled) {
+                        if (gridEnabled) {
                             newW = snapValue(newW, gridSize, true);
                             newH = snapValue(newH, gridSize, true);
                         }
 
-                        return { ...el, width: newW, height: newH };
+                        return { ...el, width: Math.max(10, newW), height: Math.max(10, newH) };
                     } else {
                         let newX = initialState.x + deltaX;
                         let newY = initialState.y + deltaY;

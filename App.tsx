@@ -1,9 +1,10 @@
 
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { TemplateDefinition, LeftSidebarTab, ExportConfig, ScreenImage } from './types';
 import { Toolbar } from './components/Toolbar';
+import { FooterBar } from './components/FooterBar';
 import { SidebarLeft } from './components/SidebarLeft';
-import { SidebarRight } from './components/SidebarRight';
+import { SidebarRight, RightTab } from './components/SidebarRight';
 import { Canvas } from './canvas/Canvas';
 import { ProjectOverview } from './components/ProjectOverview';
 import { TemplatePreviewArea } from './components/TemplatePreviewArea';
@@ -17,7 +18,7 @@ import { MousePointerClick } from 'lucide-react';
 import { useProject } from './hooks/useProject';
 import { useAppSettings } from './hooks/useAppSettings';
 import { useSelection } from './hooks/useSelection';
-import { createNewElement } from './utils/elementFactories';
+import { useHistory } from './hooks/useHistory';
 import { performBooleanOperation } from './utils/booleanOperations';
 
 const App: React.FC = () => {
@@ -31,6 +32,11 @@ const App: React.FC = () => {
       clearAllSelections 
   } = useSelection();
 
+  // History System
+  const { 
+      undo, redo, canUndo, canRedo, getHistory, jumpToHistory 
+  } = useHistory(project, setProject);
+
   // Local State
   const [scale, setScale] = useState(0.75);
   const [isPreview, setIsPreview] = useState(false);
@@ -40,9 +46,15 @@ const App: React.FC = () => {
   const [showHotspotsPersistent, setShowHotspotsPersistent] = useState(false);
   const [exportConfig, setExportConfig] = useState<ExportConfig>({ isOpen: false, type: 'project' });
   const [activeLeftTab, setActiveLeftTab] = useState<LeftSidebarTab>('project');
+  const [activeRightTab, setActiveRightTab] = useState<RightTab>('components');
   const [activeProjectSubTab, setActiveProjectSubTab] = useState<'screens' | 'task'>('screens');
   const [theme, setTheme] = useState<'light' | 'dark'>('dark');
   const [navHistory, setNavHistory] = useState<string[]>([]);
+  
+  const scrollContainerRef = useRef<HTMLDivElement>(null);
+
+  // Helper for visibility logic used in fitToCanvas
+  const isTaskPageActive = activeLeftTab === 'project' && activeProjectSubTab === 'task';
 
   // Theme Effect
   useEffect(() => {
@@ -52,6 +64,52 @@ const App: React.FC = () => {
       document.documentElement.classList.remove('dark');
     }
   }, [theme]);
+
+  // Zoom with Mouse Wheel Effect
+  useEffect(() => {
+    const handleWheel = (e: WheelEvent) => {
+      if (e.ctrlKey || e.metaKey) {
+        e.preventDefault();
+        const delta = -e.deltaY;
+        const factor = 0.001;
+        setScale((prev) => {
+          const newScale = prev + delta * factor;
+          return Math.min(Math.max(0.1, newScale), 3);
+        });
+      }
+    };
+
+    const container = scrollContainerRef.current;
+    if (container) {
+      container.addEventListener('wheel', handleWheel, { passive: false });
+    }
+    return () => {
+      if (container) {
+        container.removeEventListener('wheel', handleWheel);
+      }
+    };
+  }, []);
+
+  // Keyboard Shortcuts (Undo/Redo)
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+        if (isPreview) return;
+
+        // Undo: Ctrl/Cmd + Z
+        if ((e.ctrlKey || e.metaKey) && e.key === 'z' && !e.shiftKey) {
+            e.preventDefault();
+            undo(project.activeScreenId);
+        }
+        // Redo: Ctrl/Cmd + Y OR Ctrl/Cmd + Shift + Z
+        if (((e.ctrlKey || e.metaKey) && e.key === 'y') || ((e.ctrlKey || e.metaKey) && e.shiftKey && e.key === 'z')) {
+            e.preventDefault();
+            redo(project.activeScreenId);
+        }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [project.activeScreenId, undo, redo, isPreview]);
 
   // Handlers
   const handleOpenExport = (config: Omit<ExportConfig, 'isOpen'>) => {
@@ -63,14 +121,16 @@ const App: React.FC = () => {
       if (!value) {
           setActiveLeftTab('screens');
           setShowHotspotsPersistent(false);
-          setNavHistory([]); // Clear history when leaving preview
+          setNavHistory([]);
       }
   };
 
   const navigateTo = useCallback((screenId: string) => {
     setNavHistory(prev => [...prev, project.activeScreenId]);
     setProject(prev => ({ ...prev, activeScreenId: screenId }));
-  }, [project.activeScreenId, setProject]);
+    setSelectedScreenIds([screenId]);
+    setSelectedElementIds([]);
+  }, [project.activeScreenId, setProject, setSelectedScreenIds, setSelectedElementIds]);
 
   const goBack = useCallback(() => {
     if (navHistory.length > 0) {
@@ -79,25 +139,55 @@ const App: React.FC = () => {
       if (prevId) {
         setNavHistory(newHistory);
         setProject(prev => ({ ...prev, activeScreenId: prevId }));
+        setSelectedScreenIds([prevId]);
+        setSelectedElementIds([]);
       }
     }
-  }, [navHistory, setProject]);
-
-  const handleBooleanOperation = (op: 'union' | 'subtract' | 'intersect' | 'exclude') => {
-      const updatedProject = performBooleanOperation(op, selectedElementIds, project);
-      setProject(updatedProject);
-  };
+  }, [navHistory, setProject, setSelectedScreenIds, setSelectedElementIds]);
 
   const handleBackgroundClick = (e: React.MouseEvent) => {
       if (!isPreview) {
-          // Clear selections only when clicking on app background, 
-          // though Canvas typically handles its own background clicks.
-          // This captures clicks on the gray area around the canvas.
-          clearAllSelections();
+          // Instead of clearing everything, select the active screen when clicking blank space
+          setSelectedScreenIds([project.activeScreenId]);
+          setSelectedElementIds([]);
+          setSelectedScreenGroupIds([]);
+          setActiveRightTab('properties');
       }
   };
 
-  const isTaskPageActive = activeLeftTab === 'project' && activeProjectSubTab === 'task';
+  // Logic to perfectly fit the canvas within the remaining workspace
+  const handleFitCanvas = useCallback(() => {
+    const activeScreen = project.screens.find(s => s.id === project.activeScreenId);
+    if (!activeScreen) return;
+
+    // Header (14*4=56), Footer (10*4=40), Padding (80 total)
+    const headerH = 56;
+    const footerH = 40;
+    const padding = 120; // Extra buffer
+
+    let leftW = 0;
+    let rightW = 0;
+
+    if (!isPreview) {
+        // Left: Rail (48) + Panel (256). Collapsed if task or settings.
+        const leftPanelVisible = activeLeftTab !== 'settings' && !isTaskPageActive;
+        leftW = 48 + (leftPanelVisible ? 256 : 0);
+
+        // Right: Rail (48) + Panel (288). Collapsed if task or settings.
+        const rightPanelVisible = activeLeftTab !== 'settings' && !isTaskPageActive;
+        rightW = 48 + (rightPanelVisible ? 288 : 0);
+    }
+
+    const availW = window.innerWidth - leftW - rightW - padding;
+    const availH = window.innerHeight - headerH - footerH - padding;
+
+    const scaleW = availW / activeScreen.viewportWidth;
+    const scaleH = availH / activeScreen.viewportHeight;
+
+    const newScale = Math.min(scaleW, scaleH);
+    // Clamp between 10% and 200%
+    setScale(Math.max(0.1, Math.min(2, newScale)));
+  }, [project, isPreview, activeLeftTab, isTaskPageActive]);
 
   // Render Main Content Logic
   const renderMainContent = () => {
@@ -136,13 +226,15 @@ const App: React.FC = () => {
                 onExport={handleOpenExport}
                 activeSubTab={activeProjectSubTab}
                 setActiveSubTab={setActiveProjectSubTab}
+                setSelectedScreenIds={setSelectedScreenIds}
+                setSelectedElementIds={setSelectedElementIds}
               />
            );
       }
 
       return (
          <div 
-           className="relative m-auto p-10 transition-shadow duration-200 h-full flex items-center justify-center"
+           className="relative mx-auto py-[150px] px-[200px] transition-shadow duration-200 min-h-full flex items-center justify-center"
            onClick={handleBackgroundClick}
          >
             <Canvas
@@ -159,11 +251,29 @@ const App: React.FC = () => {
               alwaysShowHotspots={showHotspotsPersistent}
               navigateTo={navigateTo}
               goBack={goBack}
+              onCanvasClick={() => {
+                // Clicking canvas background selects the screen and focuses properties
+                setSelectedScreenIds([project.activeScreenId]);
+                setSelectedElementIds([]);
+                setActiveRightTab('properties');
+              }}
+              onCanvasDoubleClick={() => {
+                setActiveLeftTab('screens');
+                setActiveRightTab('properties');
+                setSelectedScreenIds([project.activeScreenId]);
+                setSelectedElementIds([]);
+              }}
+              onElementDoubleClick={(id) => {
+                setActiveLeftTab('layers');
+                setActiveRightTab('properties');
+                setSelectedElementIds([id]);
+                setSelectedScreenIds([]);
+              }}
             />
 
             {/* Preview Hotspots Toggle */}
             {isPreview && appSettings.showHotspots && (
-                <div className="fixed bottom-6 right-6 z-50">
+                <div className="fixed bottom-14 right-6 z-50">
                     <button
                         onClick={() => setShowHotspotsPersistent(!showHotspotsPersistent)}
                         className={`p-4 rounded-full shadow-lg transition-all flex items-center gap-2 font-medium ${
@@ -185,8 +295,6 @@ const App: React.FC = () => {
   return (
     <div className={`flex flex-col h-screen w-full bg-gray-100 dark:bg-gray-900 overflow-hidden text-gray-800 dark:text-gray-100 font-sans transition-colors duration-200`}>
       <Toolbar
-        scale={scale}
-        setScale={setScale}
         isPreview={isPreview}
         setIsPreview={handleTogglePreview}
         project={project}
@@ -214,12 +322,20 @@ const App: React.FC = () => {
             setAppSettings={setAppSettings}
             onExport={handleOpenExport}
             autoCollapse={isTaskPageActive}
+            // History props
+            canUndo={canUndo(project.activeScreenId)}
+            canRedo={canRedo(project.activeScreenId)}
+            onUndo={() => undo(project.activeScreenId)}
+            onRedo={() => redo(project.activeScreenId)}
+            history={getHistory(project.activeScreenId)}
+            onJump={(idx, type) => jumpToHistory(project.activeScreenId, idx, type)}
           />
         )}
 
         {/* Main Content */}
         <div 
-          className="flex-1 overflow-auto bg-gray-100 dark:bg-gray-950 relative flex flex-col transition-colors duration-200"
+          ref={scrollContainerRef}
+          className="flex-1 overflow-auto bg-gray-100 dark:bg-gray-950 relative flex flex-col transition-colors duration-200 custom-scrollbar"
           onClick={handleBackgroundClick}
         >
            {renderMainContent()}
@@ -242,9 +358,26 @@ const App: React.FC = () => {
             onExport={handleOpenExport}
             activeLeftTab={activeLeftTab}
             autoCollapse={isTaskPageActive}
+            activeTab={activeRightTab}
+            setActiveTab={setActiveRightTab}
           />
         )}
       </div>
+
+      {/* Full Width Footer Bar */}
+      <FooterBar 
+        scale={scale}
+        setScale={setScale}
+        project={project}
+        setProject={setProject}
+        isPreview={isPreview}
+        onFitCanvas={handleFitCanvas}
+        // History props
+        canUndo={canUndo(project.activeScreenId)}
+        canRedo={canRedo(project.activeScreenId)}
+        onUndo={() => undo(project.activeScreenId)}
+        onRedo={() => redo(project.activeScreenId)}
+      />
 
       <ExportModal 
         config={exportConfig}

@@ -1,12 +1,11 @@
 
 import React, { useState, useEffect } from 'react';
-import { Layout, Layers, ChevronLeft, ChevronRight, Ratio, Cog, FolderKanban } from 'lucide-react';
+import { Layout, Layers, ChevronLeft, ChevronRight, Cog, FolderKanban, History } from 'lucide-react';
 import { Project, LeftSidebarTab, AppSettings, ExportConfig } from '../types';
-import { CanvasSettingsMenu } from './menus/CanvasSettingsMenu';
 import { ScreensMenu } from './menus/ScreensMenu';
 import { LayersMenu } from './menus/LayersMenu';
 import { ProjectMenu } from './menus/ProjectMenu';
-// GlobalSettingsMenu is no longer needed here as it is a full page now
+import { HistoryMenu } from './menus/HistoryMenu';
 
 interface SidebarLeftProps {
   project: Project;
@@ -23,6 +22,14 @@ interface SidebarLeftProps {
   setAppSettings: (s: AppSettings) => void;
   onExport: (config: Omit<ExportConfig, 'isOpen'>) => void;
   autoCollapse?: boolean;
+  // History props
+  canUndo?: boolean;
+  canRedo?: boolean;
+  onUndo?: () => void;
+  onRedo?: () => void;
+  history?: { past: any[], future: any[] };
+  /* Fix: Update onJump type to accept index and type parameters to match jumpToHistory signature and HistoryMenu expectations */
+  onJump?: (idx: number, type: 'past' | 'future') => void;
 }
 
 export const SidebarLeft: React.FC<SidebarLeftProps> = ({
@@ -39,11 +46,17 @@ export const SidebarLeft: React.FC<SidebarLeftProps> = ({
   appSettings,
   setAppSettings,
   onExport,
-  autoCollapse
+  autoCollapse,
+  canUndo = false,
+  canRedo = false,
+  onUndo = () => {},
+  onRedo = () => {},
+  history = { past: [], future: [] },
+  /* Fix: Update default value to match the new signature */
+  onJump = () => {}
 }) => {
   const [isCollapsed, setIsCollapsed] = useState(false);
   
-  // Auto-collapse effect when requested by parent (e.g. switching to Tasks view)
   useEffect(() => {
       if (autoCollapse) {
           setIsCollapsed(true);
@@ -52,13 +65,11 @@ export const SidebarLeft: React.FC<SidebarLeftProps> = ({
 
   const toggleTab = (tab: LeftSidebarTab) => {
     if (activeTab === tab && !isCollapsed) {
-        // If clicking the same tab, collapse it (unless it's settings which is full page)
         if (tab !== 'settings') {
             setIsCollapsed(true);
         }
     } else {
         setActiveTab(tab);
-        // Ensure sidebar opens for non-settings tabs
         if (tab !== 'settings') {
             setIsCollapsed(false);
         }
@@ -75,15 +86,7 @@ export const SidebarLeft: React.FC<SidebarLeftProps> = ({
             active={activeTab === 'project'} 
             onClick={() => toggleTab('project')} 
             icon={FolderKanban} 
-            label="Project" 
-            showTooltips={appSettings.showTooltips}
-         />
-         
-         <NavButton 
-            active={activeTab === 'canvas'} 
-            onClick={() => toggleTab('canvas')} 
-            icon={Ratio} 
-            label="Canvas Settings" 
+            label="Project Info" 
             showTooltips={appSettings.showTooltips}
          />
 
@@ -101,6 +104,13 @@ export const SidebarLeft: React.FC<SidebarLeftProps> = ({
             onClick={() => toggleTab('layers')} 
             icon={Layers} 
             label="Layers" 
+            showTooltips={appSettings.showTooltips}
+         />
+         <NavButton 
+            active={activeTab === 'history'} 
+            onClick={() => toggleTab('history')} 
+            icon={History} 
+            label="History" 
             showTooltips={appSettings.showTooltips}
          />
 
@@ -125,7 +135,7 @@ export const SidebarLeft: React.FC<SidebarLeftProps> = ({
         </div>
       </div>
 
-      {/* Panel Content (Hidden if collapsed OR if Settings tab is active) */}
+      {/* Panel Content */}
       <div className={`${(isCollapsed || activeTab === 'settings') ? 'w-0' : 'w-64'} transition-all duration-300 overflow-hidden flex flex-col bg-white dark:bg-gray-800`}>
           {!isCollapsed && activeTab !== 'settings' && (
              <>
@@ -136,10 +146,6 @@ export const SidebarLeft: React.FC<SidebarLeftProps> = ({
                         appSettings={appSettings}
                         onExport={onExport}
                     />
-                )}
-
-                {activeTab === 'canvas' && (
-                    <CanvasSettingsMenu project={project} setProject={setProject} />
                 )}
 
                 {activeTab === 'screens' && (
@@ -168,6 +174,18 @@ export const SidebarLeft: React.FC<SidebarLeftProps> = ({
                         onExport={onExport}
                     />
                 )}
+
+                {activeTab === 'history' && (
+                    <HistoryMenu 
+                        project={project}
+                        canUndo={canUndo}
+                        canRedo={canRedo}
+                        onUndo={onUndo}
+                        onRedo={onRedo}
+                        history={history}
+                        onJump={onJump}
+                    />
+                )}
              </>
           )}
       </div>
@@ -193,7 +211,6 @@ const NavButton: React.FC<NavButtonProps> = ({ active, onClick, icon: Icon, labe
         }`}
     >
         <Icon size={20} />
-        {/* Tooltip on Hover */}
         {showTooltips && (
             <div className="absolute left-14 top-1/2 -translate-y-1/2 bg-gray-900 text-white text-xs px-2 py-1 rounded opacity-0 group-hover:opacity-100 pointer-events-none transition-opacity whitespace-nowrap z-50 shadow-lg border border-gray-700">
                 {label}

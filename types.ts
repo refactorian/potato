@@ -1,9 +1,7 @@
 
-
-
 export type ComponentType = 'group' | 'container' | 'button' | 'text' | 'input' | 'textarea' | 'image' | 'video' | 'navbar' | 'card' | 'icon' | 'circle' | 'checkbox' | 'radio' | 'toggle' | 'divider' | 'progress' | 'badge';
 
-export type LeftSidebarTab = 'screens' | 'layers' | 'canvas' | 'project' | 'settings';
+export type LeftSidebarTab = 'screens' | 'layers' | 'canvas' | 'project' | 'settings' | 'history';
 
 export interface ComponentStyle {
   backgroundColor?: string;
@@ -16,12 +14,10 @@ export interface ComponentStyle {
   borderBottomRightRadius?: number;
   borderWidth?: number;
   borderColor?: string;
-  // Added specific border color properties to support partial border coloring (e.g., for loading spinners)
   borderTopColor?: string;
   borderBottomColor?: string;
   borderLeftColor?: string;
   borderRightColor?: string;
-  // Fix: Changed padding from number to number | string to support CSS shorthand notation (e.g., '0 16px')
   padding?: number | string;
   shadow?: boolean;
   shadowOffsetX?: number;
@@ -63,7 +59,7 @@ export interface Interaction {
   id: string;
   trigger: 'onClick';
   action: InteractionAction;
-  payload?: string; // e.g., screenId, message, or url
+  payload?: string;
 }
 
 export interface CanvasElement {
@@ -75,11 +71,11 @@ export interface CanvasElement {
   width: number;
   height: number;
   zIndex: number;
-  parentId?: string; // For nested elements (groups)
+  parentId?: string;
   props: Record<string, any>;
   style: ComponentStyle;
   interactions: Interaction[];
-  collapsed?: boolean; // For groups in the layer tree
+  collapsed?: boolean;
   locked?: boolean;
   hidden?: boolean;
 }
@@ -91,7 +87,10 @@ export interface Screen {
   elements: CanvasElement[];
   locked?: boolean;
   hidden?: boolean;
-  groupId?: string; // ID of the ScreenGroup this screen belongs to
+  groupId?: string;
+  viewportWidth: number;
+  viewportHeight: number;
+  gridConfig: GridConfig;
 }
 
 export interface ScreenGroup {
@@ -100,7 +99,7 @@ export interface ScreenGroup {
     collapsed: boolean;
     locked?: boolean;
     hidden?: boolean;
-    parentId?: string; // Allow nested screen groups
+    parentId?: string;
 }
 
 export interface GridConfig {
@@ -108,6 +107,7 @@ export interface GridConfig {
   size: number;
   color: string;
   snapToGrid: boolean;
+  style?: 'lines' | 'dots';
 }
 
 export interface Asset {
@@ -123,12 +123,12 @@ export interface Project {
   description?: string;
   projectType?: 'mobile' | 'tablet' | 'desktop';
   tags?: string[];
-  icon?: string; // Lucide icon name
+  icon?: string;
   lastModified: number;
   viewportWidth: number;
   viewportHeight: number;
-  activeScreenId: string;
   gridConfig: GridConfig;
+  activeScreenId: string;
   screens: Screen[];
   assets: Asset[];
   screenGroups: ScreenGroup[];
@@ -148,34 +148,12 @@ export interface LibraryItemChild {
 export interface LibraryItem {
   type: ComponentType;
   label: string;
-  icon: string; // Lucide icon name
+  icon: string;
   defaultWidth: number;
   defaultHeight: number;
   defaultProps: Record<string, any>;
   defaultStyle: ComponentStyle;
-  children?: LibraryItemChild[]; // For hybrid components that come with pre-defined children (e.g. Card with text/buttons)
-}
-
-export interface LibraryItemChild {
-    type: ComponentType;
-    name: string;
-    x: number;
-    y: number;
-    width: number;
-    height: number;
-    props: Record<string, any>;
-    style: ComponentStyle;
-}
-
-export interface LibraryItem {
-  type: ComponentType;
-  label: string;
-  icon: string; // Lucide icon name
-  defaultWidth: number;
-  defaultHeight: number;
-  defaultProps: Record<string, any>;
-  defaultStyle: ComponentStyle;
-  children?: LibraryItemChild[]; // For hybrid components that come with pre-defined children (e.g. Card with text/buttons)
+  children?: LibraryItemChild[];
 }
 
 export interface LibraryCategory {
@@ -187,15 +165,17 @@ export interface ProjectTemplate {
   id: string;
   name: string;
   description: string;
-  thumbnail?: string; // Lucide icon name
-  projectData: Partial<Project> & { screens: Screen[] }; // Partial project data to merge
+  category: string;
+  tags: string[];
+  thumbnail: string;
+  projectData: Project;
 }
 
 export interface TemplateDefinition {
   id: string;
   name: string;
   category: string;
-  thumbnail: string; // Lucide icon name
+  thumbnail: string;
   backgroundColor: string;
   elements: (Omit<CanvasElement, 'id'> & { id?: string })[];
 }
@@ -211,8 +191,8 @@ export interface AppSettings {
 export interface ExportConfig {
     isOpen: boolean;
     type: 'project' | 'screen' | 'screen-group' | 'layer' | 'all-screens';
-    targetId?: string; // ID of screen or layer to export
-    targetIds?: string[]; // IDs for bulk export
+    targetId?: string;
+    targetIds?: string[];
 }
 
 export interface ScreenImage {

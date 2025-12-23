@@ -16,6 +16,8 @@ import { UIElementsMenu } from './menus/UIElementsMenu';
 import { ConfirmationModal } from './modals/ConfirmationModal';
 import { v4 as uuidv4 } from 'uuid';
 
+export type RightTab = 'properties' | 'assets' | 'components' | 'templates' | 'wireframes' | 'screen-images' | 'ui-elements';
+
 interface SidebarRightProps {
   project: Project;
   setProject: React.Dispatch<React.SetStateAction<Project>>;
@@ -31,9 +33,9 @@ interface SidebarRightProps {
   onExport?: (config: Omit<ExportConfig, 'isOpen'>) => void;
   activeLeftTab?: string;
   autoCollapse?: boolean;
+  activeTab: RightTab;
+  setActiveTab: (tab: RightTab) => void;
 }
-
-type RightTab = 'properties' | 'assets' | 'components' | 'templates' | 'wireframes' | 'screen-images' | 'ui-elements';
 
 export const SidebarRight: React.FC<SidebarRightProps> = ({
   project,
@@ -49,9 +51,10 @@ export const SidebarRight: React.FC<SidebarRightProps> = ({
   appSettings,
   onExport,
   activeLeftTab,
-  autoCollapse
+  autoCollapse,
+  activeTab,
+  setActiveTab
 }) => {
-  const [activeTab, setActiveTab] = useState<RightTab>('components');
   const [isCollapsed, setIsCollapsed] = useState(false);
   const [isPinned, setIsPinned] = useState(false);
   const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
@@ -63,11 +66,12 @@ export const SidebarRight: React.FC<SidebarRightProps> = ({
 
   useEffect(() => {
     if (isPinned) return;
+    // Automatically switch to properties when something is selected or the active screen changes
     if (selectedElementIds.length > 0 || selectedScreenIds.length > 0 || selectedScreenGroupIds.length > 0 || activeLeftTab === 'project') {
       setActiveTab('properties');
       if (!autoCollapse) setIsCollapsed(false);
     }
-  }, [selectedElementIds, selectedScreenIds, selectedScreenGroupIds, activeLeftTab, isPinned, autoCollapse]);
+  }, [selectedElementIds, selectedScreenIds, selectedScreenGroupIds, activeLeftTab, isPinned, autoCollapse, project.activeScreenId]);
 
   // --- Actions ---
 
@@ -112,7 +116,15 @@ export const SidebarRight: React.FC<SidebarRightProps> = ({
   const handleDeleteScreens = () => {
     const remaining = project.screens.filter(s => !selectedScreenIds.includes(s.id));
     const nextActive = remaining.length > 0 ? remaining[0].id : uuidv4();
-    const finalScreens = remaining.length > 0 ? remaining : [{ id: nextActive, name: 'Home', backgroundColor: '#fff', elements: [] }];
+    const finalScreens = remaining.length > 0 ? remaining : [{ 
+        id: nextActive, 
+        name: 'Home', 
+        backgroundColor: '#fff', 
+        elements: [], 
+        viewportWidth: project.viewportWidth, 
+        viewportHeight: project.viewportHeight, 
+        gridConfig: project.gridConfig 
+    }];
     setProject(prev => ({ ...prev, screens: finalScreens, activeScreenId: nextActive }));
     setSelectedScreenIds([]);
   };
@@ -143,9 +155,8 @@ export const SidebarRight: React.FC<SidebarRightProps> = ({
     setDeleteConfirmOpen(false);
   };
 
-  // --- Rendering Selection ---
-
   const renderSelectionProperties = () => {
+    // 1. Bulk Actions for multiple layers
     if (selectedElementIds.length > 1) {
       return (
         <BulkActions 
@@ -158,10 +169,12 @@ export const SidebarRight: React.FC<SidebarRightProps> = ({
       );
     }
     
+    // 2. Single Layer Properties
     if (selectedElementIds.length === 1) {
       return <LayerProperties project={project} setProject={setProject} selectedElementId={selectedElementIds[0]} />;
     }
 
+    // 3. Bulk Actions for multiple screens
     if (selectedScreenIds.length > 1) {
       return (
         <BulkActions 
@@ -174,38 +187,25 @@ export const SidebarRight: React.FC<SidebarRightProps> = ({
       );
     }
 
+    // 4. Single Screen Properties (Explicitly selected)
     if (selectedScreenIds.length === 1) {
       const screen = project.screens.find(s => s.id === selectedScreenIds[0]);
-      if (screen) return (
-        <ScreenProperties 
-          screen={screen} 
-          onUpdate={(upd) => setProject(p => ({ ...p, screens: p.screens.map(s => s.id === screen.id ? { ...s, ...upd } : s) }))}
-          onExport={() => onExport?.({ type: 'screen', targetId: screen.id })}
-          onDelete={() => { setDeleteType('screens'); setDeleteConfirmOpen(true); }}
-          onMoveToRoot={() => {
-              setProject(prev => ({ ...prev, screens: prev.screens.map(s => s.id === screen.id ? { ...s, groupId: undefined } : s) }));
-          }}
-        />
-      );
+      if (screen) {
+          return (
+            <ScreenProperties 
+              screen={screen} 
+              onUpdate={(upd) => setProject(p => ({ ...p, screens: p.screens.map(s => s.id === screen.id ? { ...s, ...upd } : s) }))}
+              onExport={() => onExport?.({ type: 'screen', targetId: screen.id })}
+              onDelete={() => { setDeleteType('screens'); setDeleteConfirmOpen(true); }}
+              onMoveToRoot={() => {
+                  setProject(prev => ({ ...prev, screens: prev.screens.map(s => s.id === screen.id ? { ...s, groupId: undefined } : s) }));
+              }}
+            />
+          );
+      }
     }
 
-    if (selectedScreenGroupIds.length > 1) {
-      return (
-        <BulkActions 
-          label="Groups" count={selectedScreenGroupIds.length}
-          onGroup={() => {}} 
-          onMove={() => {
-              setProject(prev => ({
-                  ...prev,
-                  screenGroups: prev.screenGroups.map(g => selectedScreenGroupIds.includes(g.id) ? { ...g, parentId: undefined } : g)
-              }));
-          }} 
-          onDelete={() => { setDeleteType('screenGroups'); setDeleteConfirmOpen(true); }}
-          onExport={() => {}}
-        />
-      );
-    }
-
+    // 5. Screen Group Properties
     if (selectedScreenGroupIds.length === 1) {
       const group = project.screenGroups.find(g => g.id === selectedScreenGroupIds[0]);
       if (group) return (
@@ -227,14 +227,31 @@ export const SidebarRight: React.FC<SidebarRightProps> = ({
       );
     }
 
+    // 6. Project Properties (Left sidebar context)
     if (activeLeftTab === 'project') {
       return <ProjectProperties project={project} onExport={() => onExport?.({ type: 'project' })} onDelete={() => { setDeleteType('project'); setDeleteConfirmOpen(true); }} />;
     }
 
+    // 7. DEFAULT: Auto-show active screen properties if nothing else is selected
+    const activeScreen = project.screens.find(s => s.id === project.activeScreenId);
+    if (activeScreen) {
+        return (
+            <ScreenProperties 
+              screen={activeScreen} 
+              onUpdate={(upd) => setProject(p => ({ ...p, screens: p.screens.map(s => s.id === activeScreen.id ? { ...s, ...upd } : s) }))}
+              onExport={() => onExport?.({ type: 'screen', targetId: activeScreen.id })}
+              onDelete={() => { setDeleteType('screens'); setDeleteConfirmOpen(true); }}
+              onMoveToRoot={() => {
+                  setProject(prev => ({ ...prev, screens: prev.screens.map(s => s.id === activeScreen.id ? { ...s, groupId: undefined } : s) }));
+              }}
+            />
+          );
+    }
+
     return (
-      <div className="flex flex-col items-center justify-center h-full text-gray-400 p-8 text-center animate-in fade-in duration-300">
+      <div className="flex flex-col items-center justify-center h-full text-gray-400 p-8 text-center">
         <Box size={40} className="mb-4 opacity-20" />
-        <p className="text-sm">Select an object on the canvas or in the tree to edit its properties.</p>
+        <p className="text-sm">Select an object on the canvas to edit its properties.</p>
       </div>
     );
   };
@@ -259,7 +276,7 @@ export const SidebarRight: React.FC<SidebarRightProps> = ({
 
       <div className={`transition-all duration-300 overflow-hidden flex flex-col ${isCollapsed ? 'w-0' : 'w-72'}`}>
         {!isCollapsed && (
-            <div className="flex-1 overflow-hidden">
+            <div className="flex-1 overflow-hidden animate-in fade-in duration-200" key={activeTab}>
                 {activeTab === 'properties' && renderSelectionProperties()}
                 {activeTab === 'assets' && <AssetsMenu project={project} setProject={setProject} onPreviewImage={onPreviewScreenImage} isPinned={isPinned} onTogglePin={() => setIsPinned(!isPinned)} />}
                 {activeTab === 'components' && <ComponentsMenu isPinned={isPinned} onTogglePin={() => setIsPinned(!isPinned)} />}

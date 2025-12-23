@@ -96,7 +96,11 @@ export const ScreensMenu: React.FC<ScreensMenuProps> = ({
       name: `Screen ${(project.screens || []).length + 1}`,
       backgroundColor: '#ffffff',
       elements: [],
-      groupId: targetGroupId
+      groupId: targetGroupId,
+      // Inherit project base canvas settings
+      viewportWidth: project.viewportWidth,
+      viewportHeight: project.viewportHeight,
+      gridConfig: { ...project.gridConfig }
     };
     setProject({
       ...project,
@@ -316,7 +320,15 @@ export const ScreensMenu: React.FC<ScreensMenuProps> = ({
         const idsToDelete = selectedScreenIds.length > 0 ? selectedScreenIds : [deleteModal.id];
         const remainingScreens = project.screens.filter(s => !idsToDelete.includes(s.id));
         if (remainingScreens.length === 0) {
-             remainingScreens.push({ id: uuidv4(), name: 'Home', backgroundColor: '#fff', elements: [] });
+             remainingScreens.push({ 
+                 id: uuidv4(), 
+                 name: 'Home', 
+                 backgroundColor: '#fff', 
+                 elements: [],
+                 viewportWidth: project.viewportWidth,
+                 viewportHeight: project.viewportHeight,
+                 gridConfig: { ...project.gridConfig }
+             });
         }
         let newActiveId = project.activeScreenId;
         if (idsToDelete.includes(project.activeScreenId)) {
@@ -339,7 +351,15 @@ export const ScreensMenu: React.FC<ScreensMenuProps> = ({
         const updatedScreens = project.screens.filter(s => !s.groupId || !allGroupIdsToDelete.includes(s.groupId));
         
         if (updatedScreens.length === 0) {
-             updatedScreens.push({ id: uuidv4(), name: 'Home', backgroundColor: '#fff', elements: [] });
+             updatedScreens.push({ 
+                 id: uuidv4(), 
+                 name: 'Home', 
+                 backgroundColor: '#fff', 
+                 elements: [],
+                 viewportWidth: project.viewportWidth,
+                 viewportHeight: project.viewportHeight,
+                 gridConfig: { ...project.gridConfig }
+             });
         }
         setProject({ ...project, screenGroups: updatedGroups, screens: updatedScreens, activeScreenId: updatedScreens[0].id });
         setSelectedGroupIds([]);

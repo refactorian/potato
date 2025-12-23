@@ -1,12 +1,10 @@
 
 import React, { useState, useEffect } from 'react';
-import { MonitorPlay, ZoomIn, ZoomOut, Moon, Sun, ChevronDown, Plus, Check, Folder } from 'lucide-react';
+import { MonitorPlay, Moon, Sun, ChevronDown, Plus, Check, Folder } from 'lucide-react';
 import * as LucideIcons from 'lucide-react';
 import { Project } from '../types';
 
 interface ToolbarProps {
-  scale: number;
-  setScale: (s: number) => void;
   isPreview: boolean;
   setIsPreview: (b: boolean) => void;
   project: Project;
@@ -23,8 +21,6 @@ interface ProjectMetadata {
 }
 
 export const Toolbar: React.FC<ToolbarProps> = ({
-  scale,
-  setScale,
   isPreview,
   setIsPreview,
   project,
@@ -35,8 +31,6 @@ export const Toolbar: React.FC<ToolbarProps> = ({
 }) => {
   const [isSwitcherOpen, setIsSwitcherOpen] = useState(false);
   const [projectsList, setProjectsList] = useState<ProjectMetadata[]>([]);
-
-  const activeScreen = project.screens.find(s => s.id === project.activeScreenId);
 
   useEffect(() => {
     const loadProjects = () => {
@@ -81,7 +75,7 @@ export const Toolbar: React.FC<ToolbarProps> = ({
   const ProjectIcon = project.icon && (LucideIcons as any)[project.icon] ? (LucideIcons as any)[project.icon] : null;
 
   return (
-    <div className="h-14 bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 flex items-center justify-between px-4 z-50 transition-colors duration-200 shrink-0 relative">
+    <div className="h-14 bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 flex items-center justify-between px-4 z-50 transition-colors duration-200 shrink-0 relative shadow-sm">
       
       {/* Left Section: Branding & Project Switcher */}
       <div className="flex items-center gap-4">
@@ -152,20 +146,6 @@ export const Toolbar: React.FC<ToolbarProps> = ({
         </button>
       </div>
 
-      {/* Center Section: Active Screen Name (Preview Only) */}
-      {isPreview && (
-          <div className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 flex items-center justify-center pointer-events-none z-10">
-              <div className="flex items-center gap-3 px-5 py-1.5 bg-indigo-50/80 dark:bg-indigo-900/30 border border-indigo-100/50 dark:border-indigo-800/50 rounded-full backdrop-blur-md shadow-sm animate-in fade-in slide-in-from-top-2 duration-300 pointer-events-auto">
-                  <div className="flex items-center gap-2">
-                    <div className="w-1.5 h-1.5 rounded-full bg-indigo-500 animate-pulse" />
-                    <span className="text-[9px] font-black text-indigo-600/60 dark:text-indigo-400/60 uppercase tracking-[0.2em]">Live Preview</span>
-                  </div>
-                  <div className="h-3 w-px bg-indigo-200 dark:bg-indigo-800 mx-1" />
-                  <span className="text-sm font-bold text-gray-800 dark:text-gray-100">{activeScreen?.name || 'Untitled Screen'}</span>
-              </div>
-          </div>
-      )}
-
       {/* Right Section: Tools & Settings */}
       <div className="flex items-center gap-4">
         <button
@@ -175,16 +155,6 @@ export const Toolbar: React.FC<ToolbarProps> = ({
         >
             {theme === 'dark' ? <Sun size={20} /> : <Moon size={20} />}
         </button>
-
-        <div className="flex items-center gap-2 text-sm text-gray-600 dark:text-gray-300 bg-gray-50 dark:bg-gray-700 px-2 py-1 rounded-lg border border-gray-200 dark:border-gray-600 transition-colors duration-200">
-          <button onClick={() => setScale(Math.max(0.25, scale - 0.1))} className="hover:text-indigo-600 dark:hover:text-indigo-400 p-1">
-             <ZoomOut size={16} />
-          </button>
-          <span className="w-12 text-center font-mono text-xs">{Math.round(scale * 100)}%</span>
-          <button onClick={() => setScale(Math.min(2, scale + 0.1))} className="hover:text-indigo-600 dark:hover:text-indigo-400 p-1">
-             <ZoomIn size={16} />
-          </button>
-        </div>
 
         <button
           onClick={() => setIsPreview(!isPreview)}

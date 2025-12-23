@@ -66,10 +66,14 @@ export const TemplatePreviewArea: React.FC<TemplatePreviewAreaProps> = ({
             counter++;
         }
 
+        // Fix: Added missing viewportWidth, viewportHeight, and gridConfig to Screen definition
         const newScreen: Screen = {
             id: uuidv4(),
             name: newName,
             backgroundColor: template.backgroundColor,
+            viewportWidth: project.viewportWidth,
+            viewportHeight: project.viewportHeight,
+            gridConfig: { ...project.gridConfig },
             elements: template.elements.map(el => ({
                 ...el,
                 id: uuidv4(),

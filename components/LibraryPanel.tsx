@@ -25,7 +25,6 @@ type DeviceFilter = 'all' | 'mobile' | 'tablet' | 'desktop';
 export const LibraryPanel: React.FC<LibraryPanelProps> = ({ project, setProject, activeTab, onPreviewTemplate }) => {
   
   // -- State for Search & Filter --
-  // Changed default filter to 'mobile' per requirements
   const [searchQuery, setSearchQuery] = useState('');
   const [deviceFilter, setDeviceFilter] = useState<DeviceFilter>('mobile');
 
@@ -40,7 +39,6 @@ export const LibraryPanel: React.FC<LibraryPanelProps> = ({ project, setProject,
   // -- Reset filters when tab changes --
   useEffect(() => {
       setSearchQuery('');
-      // Keep mobile as default preferred state
       setDeviceFilter('mobile');
   }, [activeTab]);
 
@@ -76,7 +74,6 @@ export const LibraryPanel: React.FC<LibraryPanelProps> = ({ project, setProject,
   };
 
   // -- Helper: Check Device Fit --
-  // Mobile < 480, Tablet 480-1024, Desktop > 1024
   const matchesDevice = (width: number) => {
       if (deviceFilter === 'all') return true;
       if (deviceFilter === 'mobile') return width <= 480;
@@ -101,7 +98,6 @@ export const LibraryPanel: React.FC<LibraryPanelProps> = ({ project, setProject,
   const filteredTemplates = useMemo(() => {
       return TEMPLATES.filter(t => {
           const matchesSearch = t.name.toLowerCase().includes(searchQuery.toLowerCase());
-          // Infer width from the first Navbar or Container found, or generic bounds check of elements
           const navbar = t.elements.find(e => e.type === 'navbar');
           const estimatedWidth = navbar ? navbar.width : 375; 
           
@@ -145,7 +141,6 @@ export const LibraryPanel: React.FC<LibraryPanelProps> = ({ project, setProject,
     const template = TEMPLATES.find(t => t.id === templateId);
     if (!template) return;
 
-    // Create unique name
     let baseName = template.name;
     let counter = 1;
     let newName = `${baseName}`;
@@ -158,6 +153,9 @@ export const LibraryPanel: React.FC<LibraryPanelProps> = ({ project, setProject,
       id: uuidv4(),
       name: newName,
       backgroundColor: template.backgroundColor,
+      viewportWidth: project.viewportWidth,
+      viewportHeight: project.viewportHeight,
+      gridConfig: { ...project.gridConfig },
       elements: template.elements.map(el => ({
         ...el,
         id: uuidv4(),
@@ -226,7 +224,7 @@ export const LibraryPanel: React.FC<LibraryPanelProps> = ({ project, setProject,
             
             {/* Filters Row */}
             <div className="flex items-center justify-between">
-                <div className="flex bg-white dark:bg-gray-700 rounded border border-gray-200 dark:border-gray-600 p-0.5">
+                <div className="flex bg-white dark:bg-gray-700 rounded border border-gray-200 dark:border-gray-700 p-0.5">
                     <button 
                         onClick={() => setDeviceFilter('all')}
                         className={`p-1 rounded ${deviceFilter === 'all' ? 'bg-indigo-100 dark:bg-indigo-900 text-indigo-600 dark:text-indigo-300' : 'text-gray-400 hover:text-gray-600 dark:hover:text-gray-200'}`}
@@ -417,7 +415,6 @@ export const LibraryPanel: React.FC<LibraryPanelProps> = ({ project, setProject,
                                             </div>
                                         </div>
 
-                                        {/* Add Button Overlay */}
                                         <button 
                                             onClick={(e) => {
                                                 e.stopPropagation();

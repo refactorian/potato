@@ -89,6 +89,7 @@ export const CreateProjectModal: React.FC<CreateProjectModalProps> = ({ isOpen, 
 
   const handleCreate = () => {
       if (activeTab === 'blank') {
+          // Fix: Added missing mandatory Screen properties to the initial screen
           const newProject: Project = {
               id: uuidv4(),
               name: projectName,
@@ -105,7 +106,20 @@ export const CreateProjectModal: React.FC<CreateProjectModalProps> = ({ isOpen, 
                   color: gridColor, 
                   snapToGrid: gridSnap 
               },
-              screens: [{ id: 'screen-1', name: 'Home', backgroundColor: backgroundColor, elements: [] }]
+              screens: [{ 
+                  id: 'screen-1', 
+                  name: 'Home', 
+                  backgroundColor: backgroundColor, 
+                  elements: [],
+                  viewportWidth: viewportWidth,
+                  viewportHeight: viewportHeight,
+                  gridConfig: { 
+                      visible: gridVisible, 
+                      size: gridSize, 
+                      color: gridColor, 
+                      snapToGrid: gridSnap 
+                  },
+              }]
           };
           onCreate(newProject);
           onClose();

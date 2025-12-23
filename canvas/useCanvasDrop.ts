@@ -23,13 +23,15 @@ export const useCanvasDrop = (
     const handleDrop = (e: React.DragEvent) => {
         e.preventDefault();
         if (isPreview) return;
-        if (activeScreen?.locked) {
+        if (!activeScreen) return;
+        
+        if (activeScreen.locked) {
             alert("This screen is locked. Unlock it to add elements.");
             return;
         }
 
         const dataString = e.dataTransfer.getData('componentData');
-        if (!dataString || !activeScreen) return;
+        if (!dataString) return;
 
         try {
             const item: LibraryItem = JSON.parse(dataString);
@@ -40,8 +42,9 @@ export const useCanvasDrop = (
             const dropX = (e.clientX - rect.left) / scale;
             const dropY = (e.clientY - rect.top) / scale;
 
-            const finalX = snapValue(dropX - (item.defaultWidth / 2), project.gridConfig?.size || 10, project.gridConfig?.snapToGrid);
-            const finalY = snapValue(dropY - (item.defaultHeight / 2), project.gridConfig?.size || 10, project.gridConfig?.snapToGrid);
+            const gridConfig = activeScreen.gridConfig || project.gridConfig;
+            const finalX = snapValue(dropX - (item.defaultWidth / 2), gridConfig?.size || 10, gridConfig?.snapToGrid);
+            const finalY = snapValue(dropY - (item.defaultHeight / 2), gridConfig?.size || 10, gridConfig?.snapToGrid);
 
             const newElements: CanvasElement[] = [];
             const rootId = uuidv4();

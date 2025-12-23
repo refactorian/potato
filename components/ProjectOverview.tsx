@@ -12,6 +12,9 @@ interface ProjectOverviewProps {
   onExport: (config: Omit<ExportConfig, 'isOpen'>) => void;
   activeSubTab: 'screens' | 'task';
   setActiveSubTab: (tab: 'screens' | 'task') => void;
+  // Added missing properties required by ScreensPage and passed from App.tsx
+  setSelectedScreenIds: (ids: string[]) => void;
+  setSelectedElementIds: (ids: string[]) => void;
 }
 
 export const ProjectOverview: React.FC<ProjectOverviewProps> = (props) => {
