@@ -1,7 +1,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { Project, TemplateDefinition, AppSettings, ExportConfig, ScreenImage } from '../types';
-import { SlidersHorizontal, Image as ImageIcon, Box, LayoutTemplate, ChevronRight, ChevronLeft, Images, Component, PenTool } from 'lucide-react';
+import { SlidersHorizontal, Image as ImageIcon, Box, LayoutTemplate, ChevronRight, ChevronLeft, Images, Component, PenTool, History } from 'lucide-react';
 import { LayerProperties } from './menus/properties/LayerProperties';
 import { ScreenProperties } from './menus/properties/ScreenProperties';
 import { ScreenGroupProperties } from './menus/properties/ScreenGroupProperties';
@@ -13,10 +13,12 @@ import { TemplatesMenu } from './menus/TemplatesMenu';
 import { WireframeTemplatesMenu } from './menus/WireframeTemplatesMenu';
 import { ScreenImagesMenu } from './menus/ScreenImagesMenu';
 import { UIElementsMenu } from './menus/UIElementsMenu';
+import { HistoryMenu } from './menus/HistoryMenu';
 import { ConfirmationModal } from './modals/ConfirmationModal';
 import { v4 as uuidv4 } from 'uuid';
+import { HistoryItem } from '../hooks/useHistory';
 
-export type RightTab = 'properties' | 'assets' | 'components' | 'templates' | 'wireframes' | 'screen-images' | 'ui-elements';
+export type RightTab = 'properties' | 'assets' | 'components' | 'templates' | 'wireframes' | 'screen-images' | 'ui-elements' | 'history';
 
 interface SidebarRightProps {
   project: Project;
@@ -35,6 +37,14 @@ interface SidebarRightProps {
   autoCollapse?: boolean;
   activeTab: RightTab;
   setActiveTab: (tab: RightTab) => void;
+  // History props
+  canUndo: boolean;
+  canRedo: boolean;
+  onUndo: () => void;
+  onRedo: () => void;
+  onClearHistory?: () => void;
+  history: { past: HistoryItem[], future: HistoryItem[] };
+  onJump: (index: number, type: 'past' | 'future') => void;
 }
 
 export const SidebarRight: React.FC<SidebarRightProps> = ({
@@ -53,7 +63,14 @@ export const SidebarRight: React.FC<SidebarRightProps> = ({
   activeLeftTab,
   autoCollapse,
   activeTab,
-  setActiveTab
+  setActiveTab,
+  canUndo,
+  canRedo,
+  onUndo,
+  onRedo,
+  onClearHistory,
+  history,
+  onJump
 }) => {
   const [isCollapsed, setIsCollapsed] = useState(false);
   const [isPinned, setIsPinned] = useState(false);
@@ -66,7 +83,6 @@ export const SidebarRight: React.FC<SidebarRightProps> = ({
 
   useEffect(() => {
     if (isPinned) return;
-    // Automatically switch to properties when something is selected or the active screen changes
     if (selectedElementIds.length > 0 || selectedScreenIds.length > 0 || selectedScreenGroupIds.length > 0 || activeLeftTab === 'project') {
       setActiveTab('properties');
       if (!autoCollapse) setIsCollapsed(false);
@@ -156,7 +172,6 @@ export const SidebarRight: React.FC<SidebarRightProps> = ({
   };
 
   const renderSelectionProperties = () => {
-    // 1. Bulk Actions for multiple layers
     if (selectedElementIds.length > 1) {
       return (
         <BulkActions 
@@ -169,12 +184,10 @@ export const SidebarRight: React.FC<SidebarRightProps> = ({
       );
     }
     
-    // 2. Single Layer Properties
     if (selectedElementIds.length === 1) {
       return <LayerProperties project={project} setProject={setProject} selectedElementId={selectedElementIds[0]} />;
     }
 
-    // 3. Screen Group Properties
     if (selectedScreenGroupIds.length === 1) {
       const group = project.screenGroups.find(g => g.id === selectedScreenGroupIds[0]);
       if (group) return (
@@ -196,7 +209,6 @@ export const SidebarRight: React.FC<SidebarRightProps> = ({
       );
     }
 
-    // 4. Bulk Actions for multiple screens
     if (selectedScreenIds.length > 1) {
       return (
         <BulkActions 
@@ -209,7 +221,6 @@ export const SidebarRight: React.FC<SidebarRightProps> = ({
       );
     }
 
-    // 5. Single Screen Properties (Canvas Selection)
     if (selectedScreenIds.length === 1) {
       const screen = project.screens.find(s => s.id === selectedScreenIds[0]);
       if (screen) {
@@ -227,12 +238,10 @@ export const SidebarRight: React.FC<SidebarRightProps> = ({
       }
     }
 
-    // 6. Project Properties (Left sidebar context)
     if (activeLeftTab === 'project') {
       return <ProjectProperties project={project} onExport={() => onExport?.({ type: 'project' })} onDelete={() => { setDeleteType('project'); setDeleteConfirmOpen(true); }} />;
     }
 
-    // 7. DEFAULT: Auto-show active screen properties if nothing else is selected
     const activeScreen = project.screens.find(s => s.id === project.activeScreenId);
     if (activeScreen) {
         return (
@@ -267,7 +276,12 @@ export const SidebarRight: React.FC<SidebarRightProps> = ({
         <NavButton active={activeTab === 'templates'} onClick={() => { setActiveTab('templates'); setIsCollapsed(false); }} icon={LayoutTemplate} label="Templates" />
         <NavButton active={activeTab === 'ui-elements'} onClick={() => { setActiveTab('ui-elements'); setIsCollapsed(false); }} icon={Component} label="UI Elements" />
         <NavButton active={activeTab === 'screen-images'} onClick={() => { setActiveTab('screen-images'); setIsCollapsed(false); }} icon={Images} label="Images" />
-        <div className="mt-auto">
+        
+        {/* Spacer and Bottom Divider for History */}
+        <div className="mt-auto w-6 h-px bg-gray-200 dark:bg-gray-700 my-2" />
+        <NavButton active={activeTab === 'history'} onClick={() => { setActiveTab('history'); setIsCollapsed(false); }} icon={History} label="Timeline" />
+
+        <div className="pb-1">
              <button onClick={() => setIsCollapsed(!isCollapsed)} className="p-2 text-gray-400 hover:text-indigo-600 transition-colors">
                  {isCollapsed ? <ChevronLeft size={20} /> : <ChevronRight size={20} />}
              </button>
@@ -284,6 +298,7 @@ export const SidebarRight: React.FC<SidebarRightProps> = ({
                 {activeTab === 'templates' && <TemplatesMenu project={project} setProject={setProject} onPreviewTemplate={onPreviewTemplate} isPinned={isPinned} onTogglePin={() => setIsPinned(!isPinned)} />}
                 {activeTab === 'ui-elements' && <UIElementsMenu onPreviewImage={onPreviewScreenImage} isPinned={isPinned} onTogglePin={() => setIsPinned(!isPinned)} />}
                 {activeTab === 'screen-images' && <ScreenImagesMenu onPreviewImage={onPreviewScreenImage} isPinned={isPinned} onTogglePin={() => setIsPinned(!isPinned)} />}
+                {activeTab === 'history' && <HistoryMenu project={project} canUndo={canUndo} canRedo={canRedo} onUndo={onUndo} onRedo={onRedo} history={history} onJump={onJump} onClearHistory={onClearHistory} />}
             </div>
         )}
 

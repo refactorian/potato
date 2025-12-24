@@ -1,5 +1,4 @@
 
-
 import React from 'react';
 import * as LucideIcons from 'lucide-react';
 import { CanvasElement, IconStyle } from '../types';
@@ -12,12 +11,22 @@ interface ElementRendererProps {
 export const ElementRenderer: React.FC<ElementRendererProps> = ({ element, isPreview }) => {
   const { type, style, props } = element;
 
+  // Global border check
   const hasBorder = style.borderWidth || style.borderTopWidth !== undefined || style.borderBottomWidth !== undefined || style.borderLeftWidth !== undefined || style.borderRightWidth !== undefined;
 
   // Shadow generation
   const boxShadow = style.shadow ? 
-    `${style.shadowOffsetX || 0}px ${style.shadowOffsetY || 4}px ${style.shadowBlur || 6}px ${style.shadowSpread || -1}px ${style.shadowColor || 'rgba(0,0,0,0.1)'}` : 
+    `${style.shadowOffsetX || 0}px ${style.shadowOffsetY || 4}px ${style.shadowBlur || 12}px ${style.shadowSpread || -2}px ${style.shadowColor || 'rgba(0,0,0,0.15)'}` : 
     'none';
+
+  // Filter generation
+  const filters = [];
+  if (style.filterBlur) filters.push(`blur(${style.filterBlur}px)`);
+  if (style.filterBrightness !== undefined) filters.push(`brightness(${style.filterBrightness}%)`);
+  if (style.filterContrast !== undefined) filters.push(`contrast(${style.filterContrast}%)`);
+  if (style.filterSaturate !== undefined) filters.push(`saturate(${style.filterSaturate}%)`);
+  if (style.filterGrayscale) filters.push(`grayscale(${style.filterGrayscale}%)`);
+  const filterString = filters.join(' ') || 'none';
 
   const commonStyle: React.CSSProperties = {
     width: '100%',
@@ -52,6 +61,7 @@ export const ElementRenderer: React.FC<ElementRendererProps> = ({ element, isPre
     textDecoration: style.textDecoration,
     padding: typeof style.padding === 'number' ? `${style.padding}px` : style.padding,
     lineHeight: style.lineHeight,
+    filter: filterString,
     overflow: 'hidden',
     display: 'flex',
     flexDirection: 'column',
@@ -99,7 +109,6 @@ export const ElementRenderer: React.FC<ElementRendererProps> = ({ element, isPre
           {props.text}
         </div>
       );
-    /* Added case for navbar to render title and icons */
     case 'navbar':
       const NavLeftIcon = props.leftIcon ? getIcon(props.leftIcon) : null;
       const NavRightIcon = props.rightIcon ? getIcon(props.rightIcon) : null;
@@ -127,7 +136,6 @@ export const ElementRenderer: React.FC<ElementRendererProps> = ({ element, isPre
           </div>
         </div>
       );
-    /* Added case for card to render title and subtitle */
     case 'card':
       return (
         <div style={{ 
@@ -197,7 +205,7 @@ export const ElementRenderer: React.FC<ElementRendererProps> = ({ element, isPre
     case 'progress':
         const progress = Math.min(100, Math.max(0, props.value || 0));
         return (
-            <div style={{ ...commonStyle, backgroundColor: '#f1f5f9', padding: 0, justifyContent: 'flex-start', overflow: 'hidden' }}>
+            <div style={{ ...commonStyle, backgroundColor: props.trackColor || '#f1f5f9', padding: 0, justifyContent: 'flex-start', overflow: 'hidden' }}>
                 <div style={{ width: `${progress}%`, height: '100%', backgroundColor: style.backgroundColor || '#3b82f6', transition: 'width 0.3s ease' }} />
             </div>
         );

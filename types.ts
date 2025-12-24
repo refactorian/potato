@@ -1,8 +1,7 @@
 
-
 export type ComponentType = 'group' | 'container' | 'button' | 'text' | 'input' | 'textarea' | 'image' | 'video' | 'icon' | 'circle' | 'checkbox' | 'radio' | 'toggle' | 'divider' | 'progress' | 'badge' | 'navbar' | 'card';
 
-export type LeftSidebarTab = 'screens' | 'layers' | 'canvas' | 'project' | 'settings' | 'history';
+export type LeftSidebarTab = 'screens' | 'layers' | 'canvas' | 'project' | 'settings';
 
 export interface ComponentStyle {
   backgroundColor?: string;
@@ -44,7 +43,13 @@ export interface ComponentStyle {
   borderBottomWidth?: number;
   borderLeftWidth?: number;
   borderRightWidth?: number;
-  textDecoration?: string;
+  textDecoration?: 'none' | 'underline' | 'line-through';
+  // Filter Properties
+  filterBlur?: number;
+  filterBrightness?: number;
+  filterContrast?: number;
+  filterGrayscale?: number;
+  filterSaturate?: number;
 }
 
 export interface IconStyle {

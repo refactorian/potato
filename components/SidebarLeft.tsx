@@ -1,11 +1,10 @@
 
 import React, { useState, useEffect } from 'react';
-import { Layout, Layers, ChevronLeft, ChevronRight, Cog, FolderKanban, History } from 'lucide-react';
+import { Layout, Layers, ChevronLeft, ChevronRight, Cog, FolderKanban } from 'lucide-react';
 import { Project, LeftSidebarTab, AppSettings, ExportConfig } from '../types';
 import { ScreensMenu } from './menus/ScreensMenu';
 import { LayersMenu } from './menus/LayersMenu';
 import { ProjectMenu } from './menus/ProjectMenu';
-import { HistoryMenu } from './menus/HistoryMenu';
 
 interface SidebarLeftProps {
   project: Project;
@@ -22,14 +21,6 @@ interface SidebarLeftProps {
   setAppSettings: (s: AppSettings) => void;
   onExport: (config: Omit<ExportConfig, 'isOpen'>) => void;
   autoCollapse?: boolean;
-  // History props
-  canUndo?: boolean;
-  canRedo?: boolean;
-  onUndo?: () => void;
-  onRedo?: () => void;
-  history?: { past: any[], future: any[] };
-  /* Fix: Update onJump type to accept index and type parameters to match jumpToHistory signature and HistoryMenu expectations */
-  onJump?: (idx: number, type: 'past' | 'future') => void;
 }
 
 export const SidebarLeft: React.FC<SidebarLeftProps> = ({
@@ -46,14 +37,7 @@ export const SidebarLeft: React.FC<SidebarLeftProps> = ({
   appSettings,
   setAppSettings,
   onExport,
-  autoCollapse,
-  canUndo = false,
-  canRedo = false,
-  onUndo = () => {},
-  onRedo = () => {},
-  history = { past: [], future: [] },
-  /* Fix: Update default value to match the new signature */
-  onJump = () => {}
+  autoCollapse
 }) => {
   const [isCollapsed, setIsCollapsed] = useState(false);
   
@@ -104,13 +88,6 @@ export const SidebarLeft: React.FC<SidebarLeftProps> = ({
             onClick={() => toggleTab('layers')} 
             icon={Layers} 
             label="Layers" 
-            showTooltips={appSettings.showTooltips}
-         />
-         <NavButton 
-            active={activeTab === 'history'} 
-            onClick={() => toggleTab('history')} 
-            icon={History} 
-            label="History" 
             showTooltips={appSettings.showTooltips}
          />
 
@@ -173,18 +150,6 @@ export const SidebarLeft: React.FC<SidebarLeftProps> = ({
                         setSelectedScreenGroupIds={setSelectedScreenGroupIds}
                         appSettings={appSettings}
                         onExport={onExport}
-                    />
-                )}
-
-                {activeTab === 'history' && (
-                    <HistoryMenu 
-                        project={project}
-                        canUndo={canUndo}
-                        canRedo={canRedo}
-                        onUndo={onUndo}
-                        onRedo={onRedo}
-                        history={history}
-                        onJump={onJump}
                     />
                 )}
              </>

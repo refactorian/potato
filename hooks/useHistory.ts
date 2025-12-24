@@ -1,200 +1,179 @@
 
 import { useState, useCallback, useRef, useEffect } from 'react';
-import { Screen, Project, CanvasElement } from '../types';
+import { Project } from '../types';
 
 export interface HistoryItem {
-  state: Screen;
+  state: Project;
   label: string;
   timestamp: number;
 }
 
-interface ScreenHistory {
+interface ProjectHistory {
   past: HistoryItem[];
   future: HistoryItem[];
 }
 
 export const useHistory = (project: Project, setProject: (p: Project) => void) => {
-  const [historyMap, setHistoryMap] = useState<Record<string, ScreenHistory>>({});
+  const [history, setHistory] = useState<ProjectHistory>({ past: [], future: [] });
   const isInternalChange = useRef(false);
-  const prevScreensRef = useRef<Screen[]>(project.screens);
+  const prevProjectRef = useRef<Project>(project);
+  const debounceTimer = useRef<any>(null);
 
-  // Helper to identify what changed between two screens
-  const getActionLabel = (prev: Screen, current: Screen): string => {
-    if (prev.elements.length < current.elements.length) return 'Element Added';
-    if (prev.elements.length > current.elements.length) return 'Element Removed';
-    if (prev.backgroundColor !== current.backgroundColor) return 'Background Changed';
-    if (prev.viewportWidth !== current.viewportWidth || prev.viewportHeight !== current.viewportHeight) return 'Dimensions Changed';
+  const getActionLabel = (prev: Project, current: Project): string => {
+    if (prev.name !== current.name) return 'Rename Project';
+    if (prev.screens.length < current.screens.length) return 'Add Screen';
+    if (prev.screens.length > current.screens.length) return 'Remove Screen';
+    if (prev.activeScreenId !== current.activeScreenId) return 'Switch Screen';
     
-    // Check for individual element changes
-    for (let i = 0; i < current.elements.length; i++) {
-      const el = current.elements[i];
-      const pEl = prev.elements.find(e => e.id === el.id);
-      if (!pEl) continue;
-      
-      if (el.x !== pEl.x || el.y !== pEl.y || el.width !== pEl.width || el.height !== pEl.height) {
-        return `Moved ${el.name}`;
-      }
-      if (JSON.stringify(el.style) !== JSON.stringify(pEl.style)) {
-        return `Styled ${el.name}`;
-      }
-      if (JSON.stringify(el.props) !== JSON.stringify(pEl.props)) {
-        return `Updated ${el.name}`;
-      }
+    const currentActiveScreen = current.screens.find(s => s.id === current.activeScreenId);
+    const prevActiveScreen = prev.screens.find(s => s.id === prev.activeScreenId);
+    
+    if (currentActiveScreen && prevActiveScreen) {
+        if (currentActiveScreen.backgroundColor !== prevActiveScreen.backgroundColor) return 'Screen Style';
+        if (currentActiveScreen.elements.length < prevActiveScreen.elements.length) return 'Delete Layer';
+        if (currentActiveScreen.elements.length > prevActiveScreen.elements.length) return 'Create Layer';
+        
+        for (let i = 0; i < currentActiveScreen.elements.length; i++) {
+            const el = currentActiveScreen.elements[i];
+            const pEl = prevActiveScreen.elements.find(e => e.id === el.id);
+            if (!pEl) continue;
+            if (el.x !== pEl.x || el.y !== pEl.y || el.width !== pEl.width || el.height !== pEl.height) return `Move ${el.name}`;
+            if (JSON.stringify(el.style) !== JSON.stringify(pEl.style)) return `Style ${el.name}`;
+            if (JSON.stringify(el.props) !== JSON.stringify(pEl.props)) return `Update ${el.name}`;
+        }
     }
-    
-    return 'Screen Updated';
+
+    return 'Modify Project';
   };
 
   useEffect(() => {
     if (isInternalChange.current) {
         isInternalChange.current = false;
-        prevScreensRef.current = project.screens;
+        prevProjectRef.current = project;
         return;
     }
 
-    project.screens.forEach(currentScreen => {
-        const prevScreen = prevScreensRef.current.find(ps => ps.id === currentScreen.id);
+    if (debounceTimer.current) clearTimeout(debounceTimer.current);
+
+    debounceTimer.current = setTimeout(() => {
+        const currentSnapshot = JSON.stringify({ 
+            name: project.name, 
+            screens: project.screens, 
+            activeScreenId: project.activeScreenId,
+            viewportWidth: project.viewportWidth,
+            viewportHeight: project.viewportHeight,
+            gridConfig: project.gridConfig
+        });
         
-        if (prevScreen) {
-            const currentHash = JSON.stringify(currentScreen.elements) + currentScreen.backgroundColor + currentScreen.viewportWidth + currentScreen.viewportHeight;
-            const prevHash = JSON.stringify(prevScreen.elements) + prevScreen.backgroundColor + prevScreen.viewportWidth + prevScreen.viewportHeight;
+        const prevSnapshot = JSON.stringify({ 
+            name: prevProjectRef.current.name, 
+            screens: prevProjectRef.current.screens, 
+            activeScreenId: prevProjectRef.current.activeScreenId,
+            viewportWidth: prevProjectRef.current.viewportWidth,
+            viewportHeight: prevProjectRef.current.viewportHeight,
+            gridConfig: prevProjectRef.current.gridConfig
+        });
 
-            if (currentHash !== prevHash) {
-                const label = getActionLabel(prevScreen, currentScreen);
-                
-                setHistoryMap(prev => {
-                    const sh = prev[currentScreen.id] || { past: [], future: [] };
-                    
-                    // Don't record if the last item in past is the same as the state we're about to add
-                    const lastPast = sh.past[sh.past.length - 1];
-                    if (lastPast && JSON.stringify(lastPast.state) === prevHash) {
-                        return prev;
-                    }
-
-                    const newPastItem: HistoryItem = {
-                        state: prevScreen,
-                        label,
-                        timestamp: Date.now()
-                    };
-
-                    return {
-                        ...prev,
-                        [currentScreen.id]: { 
-                            past: [...sh.past, newPastItem].slice(-50), 
-                            future: [] 
-                        }
-                    };
-                });
-            }
+        if (currentSnapshot !== prevSnapshot) {
+            const label = getActionLabel(prevProjectRef.current, project);
+            
+            setHistory(prev => ({
+                past: [...prev.past, { state: prevProjectRef.current, label, timestamp: Date.now() }].slice(-50),
+                future: []
+            }));
         }
-    });
 
-    prevScreensRef.current = project.screens;
-  }, [project.screens]);
+        prevProjectRef.current = project;
+    }, 800);
 
-  const undo = useCallback((screenId: string) => {
-    setHistoryMap(prev => {
-      const sh = prev[screenId];
-      if (!sh || sh.past.length === 0) return prev;
+    return () => {
+        if (debounceTimer.current) clearTimeout(debounceTimer.current);
+    };
+  }, [project]);
 
-      const newPast = [...sh.past];
-      const previousHistoryItem = newPast.pop()!;
-      const currentState = project.screens.find(s => s.id === screenId)!;
+  const undo = useCallback(() => {
+    setHistory(prev => {
+        if (prev.past.length === 0) return prev;
 
-      isInternalChange.current = true;
-      setProject({
-        ...project,
-        screens: project.screens.map(s => s.id === screenId ? previousHistoryItem.state : s)
-      });
+        const newPast = [...prev.past];
+        const snapshot = newPast.pop()!;
+        
+        const currentStateAsFuture: HistoryItem = {
+            state: project,
+            label: snapshot.label,
+            timestamp: Date.now()
+        };
 
-      const currentAsFuture: HistoryItem = {
-        state: currentState,
-        label: previousHistoryItem.label,
-        timestamp: Date.now()
-      };
+        isInternalChange.current = true;
+        setProject(snapshot.state);
 
-      return {
-        ...prev,
-        [screenId]: {
-          past: newPast,
-          future: [currentAsFuture, ...sh.future].slice(0, 50)
-        }
-      };
+        return {
+            past: newPast,
+            future: [currentStateAsFuture, ...prev.future].slice(0, 50)
+        };
     });
   }, [project, setProject]);
 
-  const redo = useCallback((screenId: string) => {
-    setHistoryMap(prev => {
-      const sh = prev[screenId];
-      if (!sh || sh.future.length === 0) return prev;
+  const redo = useCallback(() => {
+    setHistory(prev => {
+        if (prev.future.length === 0) return prev;
 
-      const newFuture = [...sh.future];
-      const nextHistoryItem = newFuture.shift()!;
-      const currentState = project.screens.find(s => s.id === screenId)!;
+        const newFuture = [...prev.future];
+        const snapshot = newFuture.shift()!;
 
-      isInternalChange.current = true;
-      setProject({
-        ...project,
-        screens: project.screens.map(s => s.id === screenId ? nextHistoryItem.state : s)
-      });
+        const currentStateAsPast: HistoryItem = {
+            state: project,
+            label: snapshot.label,
+            timestamp: Date.now()
+        };
 
-      const currentAsPast: HistoryItem = {
-        state: currentState,
-        label: nextHistoryItem.label,
-        timestamp: Date.now()
-      };
+        isInternalChange.current = true;
+        setProject(snapshot.state);
 
-      return {
-        ...prev,
-        [screenId]: {
-          past: [...sh.past, currentAsPast].slice(-50),
-          future: newFuture
-        }
-      };
+        return {
+            past: [...prev.past, currentStateAsPast].slice(-50),
+            future: newFuture
+        };
     });
   }, [project, setProject]);
 
-  const jumpToHistory = useCallback((screenId: string, index: number, type: 'past' | 'future') => {
-      setHistoryMap(prev => {
-          const sh = prev[screenId];
-          if (!sh) return prev;
-          
-          const currentState = project.screens.find(s => s.id === screenId)!;
+  const jumpToHistory = useCallback((index: number, type: 'past' | 'future') => {
+      setHistory(prev => {
           let targetItem: HistoryItem;
           let newPast: HistoryItem[];
           let newFuture: HistoryItem[];
 
           if (type === 'past') {
-              targetItem = sh.past[index];
-              newPast = sh.past.slice(0, index);
-              const movingToFuture = sh.past.slice(index).map(item => ({ ...item, timestamp: Date.now() }));
-              newFuture = [...movingToFuture, ...sh.future].slice(0, 50);
+              targetItem = prev.past[index];
+              newPast = prev.past.slice(0, index);
+              const currentAsFuture: HistoryItem = { state: project, label: 'Restore point', timestamp: Date.now() };
+              const reversedOldPast = prev.past.slice(index + 1).reverse();
+              newFuture = [currentAsFuture, ...reversedOldPast, ...prev.future].slice(0, 50);
           } else {
-              targetItem = sh.future[index];
-              const movingToPast = sh.future.slice(0, index + 1).map(item => ({ ...item, timestamp: Date.now() }));
-              newPast = [...sh.past, ...movingToPast].slice(-50);
-              newFuture = sh.future.slice(index + 1);
+              targetItem = prev.future[index];
+              const currentAsPast: HistoryItem = { state: project, label: 'Snapshot', timestamp: Date.now() };
+              newPast = [...prev.past, currentAsPast, ...prev.future.slice(0, index)].slice(-50);
+              newFuture = prev.future.slice(index + 1);
           }
 
           isInternalChange.current = true;
-          setProject({
-            ...project,
-            screens: project.screens.map(s => s.id === screenId ? targetItem.state : s)
-          });
+          setProject(targetItem.state);
 
-          return {
-              ...prev,
-              [screenId]: { past: newPast, future: newFuture }
-          };
+          return { past: newPast, future: newFuture };
       });
   }, [project, setProject]);
+
+  const clearHistory = useCallback(() => {
+      setHistory({ past: [], future: [] });
+  }, []);
 
   return {
     undo,
     redo,
     jumpToHistory,
-    canUndo: (screenId: string) => (historyMap[screenId]?.past.length || 0) > 0,
-    canRedo: (screenId: string) => (historyMap[screenId]?.future.length || 0) > 0,
-    getHistory: (screenId: string) => historyMap[screenId] || { past: [], future: [] }
+    clearHistory,
+    canUndo: history.past.length > 0,
+    canRedo: history.future.length > 0,
+    history
   };
 };

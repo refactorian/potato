@@ -19,7 +19,6 @@ import { useProject } from './hooks/useProject';
 import { useAppSettings } from './hooks/useAppSettings';
 import { useSelection } from './hooks/useSelection';
 import { useHistory } from './hooks/useHistory';
-import { performBooleanOperation } from './utils/booleanOperations';
 
 const App: React.FC = () => {
   // State Hooks
@@ -29,12 +28,11 @@ const App: React.FC = () => {
       selectedElementIds, setSelectedElementIds,
       selectedScreenIds, setSelectedScreenIds,
       selectedScreenGroupIds, setSelectedScreenGroupIds,
-      clearAllSelections 
   } = useSelection();
 
-  // History System
+  // History System (Project-based)
   const { 
-      undo, redo, canUndo, canRedo, getHistory, jumpToHistory 
+      undo, redo, canUndo, canRedo, history, jumpToHistory, clearHistory 
   } = useHistory(project, setProject);
 
   // Local State
@@ -98,18 +96,18 @@ const App: React.FC = () => {
         // Undo: Ctrl/Cmd + Z
         if ((e.ctrlKey || e.metaKey) && e.key === 'z' && !e.shiftKey) {
             e.preventDefault();
-            undo(project.activeScreenId);
+            undo();
         }
         // Redo: Ctrl/Cmd + Y OR Ctrl/Cmd + Shift + Z
         if (((e.ctrlKey || e.metaKey) && e.key === 'y') || ((e.ctrlKey || e.metaKey) && e.shiftKey && e.key === 'z')) {
             e.preventDefault();
-            redo(project.activeScreenId);
+            redo();
         }
     };
 
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [project.activeScreenId, undo, redo, isPreview]);
+  }, [undo, redo, isPreview]);
 
   // Handlers
   const handleOpenExport = (config: Omit<ExportConfig, 'isOpen'>) => {
@@ -323,13 +321,6 @@ const App: React.FC = () => {
             setAppSettings={setAppSettings}
             onExport={handleOpenExport}
             autoCollapse={isTaskPageActive}
-            // History props
-            canUndo={canUndo(project.activeScreenId)}
-            canRedo={canRedo(project.activeScreenId)}
-            onUndo={() => undo(project.activeScreenId)}
-            onRedo={() => redo(project.activeScreenId)}
-            history={getHistory(project.activeScreenId)}
-            onJump={(idx, type) => jumpToHistory(project.activeScreenId, idx, type)}
           />
         )}
 
@@ -361,6 +352,14 @@ const App: React.FC = () => {
             autoCollapse={isTaskPageActive}
             activeTab={activeRightTab}
             setActiveTab={setActiveRightTab}
+            // History props
+            canUndo={canUndo}
+            canRedo={canRedo}
+            onUndo={undo}
+            onRedo={redo}
+            onClearHistory={clearHistory}
+            history={history}
+            onJump={jumpToHistory}
           />
         )}
       </div>
@@ -374,10 +373,10 @@ const App: React.FC = () => {
         isPreview={isPreview}
         onFitCanvas={handleFitCanvas}
         // History props
-        canUndo={canUndo(project.activeScreenId)}
-        canRedo={canRedo(project.activeScreenId)}
-        onUndo={() => undo(project.activeScreenId)}
-        onRedo={() => redo(project.activeScreenId)}
+        canUndo={canUndo}
+        canRedo={canRedo}
+        onUndo={undo}
+        onRedo={redo}
       />
 
       <ExportModal 
